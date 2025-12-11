@@ -1,0 +1,1007 @@
+import React, { useEffect, useState, useRef } from "react";
+import {
+  Box,
+  Paper,
+  Typography,
+  Stack,
+  CircularProgress,
+  Backdrop,
+  LinearProgress,
+  Grid,
+  TextField,
+  Button,
+  Box as MBox,
+} from "@mui/material";
+import { Bar as BarChart, Doughnut } from "react-chartjs-2";
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  Title,
+  Tooltip,
+  Legend,
+  ArcElement,
+  ChartOptions,
+} from "chart.js";
+import MonetizationOnIcon from "@mui/icons-material/MonetizationOn";
+import ShoppingCartIcon from "@mui/icons-material/ShoppingCart";
+import TrendingUpIcon from "@mui/icons-material/TrendingUp";
+import ReceiptIcon from "@mui/icons-material/Receipt";
+import PieChartIcon from "@mui/icons-material/PieChart";
+import StoreIcon from "@mui/icons-material/Store";
+import GroupIcon from "@mui/icons-material/Group";
+import LocalMallIcon from "@mui/icons-material/LocalMall";
+import axiosInstance from "../configs/axiosConfig";
+import useMediaQuery from "@mui/material/useMediaQuery";
+import { useTheme, alpha } from "@mui/material/styles";
+import AssignmentIcon from "@mui/icons-material/Assignment";
+import AccountBalanceWalletIcon from "@mui/icons-material/AccountBalanceWallet";
+import ReportProblemIcon from "@mui/icons-material/ReportProblem";
+import HourglassEmptyIcon from "@mui/icons-material/HourglassEmpty";
+import { DatePicker, LocalizationProvider } from "@mui/x-date-pickers";
+import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  Title,
+  Tooltip,
+  Legend,
+  ArcElement
+);
+
+const months = [
+  "January",
+  "February",
+  "March",
+  "April",
+  "May",
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December",
+];
+
+const SALES_TARGET = 6000000;
+
+const Dashboard: React.FC = () => {
+  const [loading, setLoading] = useState(false);
+  const [allTime, setAllTime] = useState({
+    grossProfit: 0,
+    grossProfitMargin: 0,
+    sales: 0,
+    expenses: 0,
+  });
+  const [today, setToday] = useState({
+    sales: 0,
+    itemsSold: 0,
+    expenses: 0,
+  });
+  // number of orders (sales records) for today
+  const [ordersToday, setOrdersToday] = useState<number>(0);
+  const [bestsellers, setBestsellers] = useState<any[]>([]);
+  const [topChannels, setTopChannels] = useState<any[]>([]);
+  const [expenseDist, setExpenseDist] = useState<any[]>([]);
+  const [dailyChart, setDailyChart] = useState<any>({
+    labels: [],
+    datasets: [
+      {
+        label: "Sales",
+        data: [],
+        backgroundColor: "#27ae60",
+        borderRadius: 4,
+        barPercentage: 0.7,
+      },
+      {
+        label: "Expenses",
+        data: [],
+        backgroundColor: "#c0392b",
+        borderRadius: 4,
+        barPercentage: 0.7,
+      },
+    ],
+  });
+  const [monthlyChart, setMonthlyChart] = useState<any>({
+    labels: [],
+    datasets: [
+      {
+        label: "Sales",
+        data: [],
+        backgroundColor: "#27ae60",
+        borderRadius: 4,
+        barPercentage: 0.7,
+      },
+      {
+        label: "Expenses",
+        data: [],
+        backgroundColor: "#c0392b",
+        borderRadius: 4,
+        barPercentage: 0.7,
+      },
+    ],
+  });
+  const [filterFrom, setFilterFrom] = useState<Date | null>(null);
+  const [filterTo, setFilterTo] = useState<Date | null>(null);
+
+  const theme = useTheme();
+  const isMobile = useMediaQuery("(max-width:800px)");
+  const textColor = theme.palette.text.primary;
+
+  const formatDateParam = (d: Date | null) => {
+    if (!d) return "";
+    return d.toISOString().slice(0, 10);
+  };
+
+  // move loader function out so Apply can call it
+  const loadSummary = async (dateFrom?: Date, dateTo?: Date) => {
+    setLoading(true);
+    try {
+      const q: any = {};
+      const fromStr = formatDateParam(dateFrom ?? null);
+      const toStr = formatDateParam(dateTo ?? null);
+      if (dateFrom) q.dateFrom = fromStr;
+      if (dateTo) q.dateTo = toStr;
+
+      const url =
+        "/dashboard/summary" +
+        (Object.keys(q).length
+          ? `?dateFrom=${encodeURIComponent(
+              fromStr
+            )}&dateTo=${encodeURIComponent(toStr)}`
+          : "");
+      const { data } = await axiosInstance.get(url);
+
+      // top-level summary
+      const totalSold = Number(data.totalSoldPrice || 0);
+      const grossProfit = Number(data.allTimeGrossProfit || 0);
+      const allExpenses = Number(data.allTimeExpenses || 0);
+
+      setAllTime({
+        grossProfit,
+        grossProfitMargin: totalSold
+          ? Math.round((grossProfit / totalSold) * 100)
+          : 0,
+        sales: totalSold,
+        expenses: allExpenses,
+        totalPurchaseOrders: Number(data.totalPurchaseOrders || 0),
+        totalPaidOrders: Number(data.totalPaidOrders || 0),
+        totalPaidOrdersPartially: Number(data.totalPaidOrdersPartially || 0),
+        totalUnpaidOrders: Number(data.totalUnpaidOrders || 0),
+        totalPaymentsAccomplies: Number(
+          data.totalPaymentsAccomplies || data.totalDeliveryAccomplies || 0
+        ),
+      });
+
+      setToday({
+        sales: Number(data.salesToday || 0),
+        itemsSold: Number(data.itemsSoldToday || 0),
+        expenses: Number(data.expensesToday || 0),
+      });
+
+      // labels: if backend returned dailyLabels use them; otherwise generate by current month
+      let labels: string[] = [];
+      if (Array.isArray(data.dailyLabels) && data.dailyLabels.length > 0) {
+        // show just the day part for compactness if they are YYYY-MM-DD
+        labels = data.dailyLabels.map((d: string) => {
+          if (typeof d === "string" && d.match(/^\d{4}-\d{2}-\d{2}$/))
+            return d.slice(8);
+          return String(d);
+        });
+      } else {
+        const now = new Date();
+        const daysInMonth = new Date(
+          now.getFullYear(),
+          now.getMonth() + 1,
+          0
+        ).getDate();
+        labels = Array.from({ length: daysInMonth }, (_, i) =>
+          (i + 1).toString()
+        );
+      }
+
+      setDailyChart({
+        labels,
+        datasets: [
+          {
+            label: "Sales",
+            backgroundColor: "#27ae60",
+            data: Array.isArray(data.dailySales)
+              ? data.dailySales
+              : Array(labels.length).fill(0),
+            borderRadius: 4,
+            barPercentage: 0.7,
+          },
+          {
+            label: "Expenses",
+            backgroundColor: "#c0392b",
+            data: Array.isArray(data.dailyExpenses)
+              ? data.dailyExpenses
+              : Array(labels.length).fill(0),
+            borderRadius: 4,
+            barPercentage: 0.7,
+          },
+        ],
+      });
+
+      setMonthlyChart({
+        labels: months,
+        datasets: [
+          {
+            label: "Sales",
+            backgroundColor: "#27ae60",
+            data: Array.isArray(data.monthlySales)
+              ? data.monthlySales
+              : Array(12).fill(0),
+            borderRadius: 4,
+            barPercentage: 0.7,
+          },
+          {
+            label: "Expenses",
+            backgroundColor: "#c0392b",
+            data: Array.isArray(data.monthlyExpenses)
+              ? data.monthlyExpenses
+              : Array(12).fill(0),
+            borderRadius: 4,
+            barPercentage: 0.7,
+          },
+        ],
+      });
+
+      setTopChannels(Array.isArray(data.topChannels) ? data.topChannels : []);
+      setExpenseDist(Array.isArray(data.expenseDist) ? data.expenseDist : []);
+      setOrdersToday(Number(data.ordersToday || 0));
+
+      // bestsellers already set in previous loadSummary (productQuantities)
+      const prodQuant: any[] = Array.isArray(data.productQuantities)
+        ? data.productQuantities
+        : [];
+      setBestsellers(
+        prodQuant.slice(0, 10).map((p) => ({
+          name: p.name || "Unknown",
+          total: Number(p.totalQuantity || 0),
+        }))
+      );
+    } catch (err) {
+      // keep previous state on error
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const didLoadRef = useRef(false);
+  useEffect(() => {
+    // Guard so we don't fire twice in React 18 StrictMode (dev)
+    if (didLoadRef.current) return;
+    didLoadRef.current = true;
+    loadSummary();
+  }, []);
+
+  // handlers for date filter UI
+  const applyDateFilter = () => {
+    if (!filterFrom || !filterTo) return loadSummary(); // fallback: no filter
+    loadSummary(filterFrom, filterTo);
+  };
+  const clearDateFilter = () => {
+    setFilterFrom(null);
+    setFilterTo(null);
+    loadSummary();
+  };
+
+  // lighter card style
+  const chartCardSx = {
+    flex: 2,
+    bgcolor: "#fff",
+    color: textColor,
+    p: 2,
+    borderRadius: 2,
+    border: "1px solid rgba(15,23,42,0.06)",
+    boxShadow: "0 1px 6px rgba(15,23,42,0.06)",
+  };
+
+  const chartOptions: ChartOptions = {
+    responsive: true,
+    plugins: {
+      legend: {
+        display: true,
+        position: "top" as const,
+        labels: {
+          color: textColor,
+          font: { size: 13 },
+        },
+      },
+      title: { display: false },
+    },
+    scales: {
+      x: {
+        grid: { display: false, color: "rgba(0,0,0,0.04)" },
+        ticks: { color: textColor },
+      },
+      y: {
+        grid: { color: "rgba(0,0,0,0.04)" },
+        ticks: {
+          color: textColor,
+          callback: (value: any) =>
+            value.toLocaleString(undefined, { minimumFractionDigits: 2 }),
+        },
+      },
+    },
+  };
+
+  const horizontalBarOptions: ChartOptions = {
+    indexAxis: "y" as const,
+    responsive: true,
+    plugins: {
+      legend: { display: false },
+      title: { display: false },
+      tooltip: {
+        callbacks: {
+          label: (ctx: any) =>
+            ctx.parsed.x.toLocaleString(undefined, {
+              minimumFractionDigits: 0,
+            }),
+        },
+      },
+    },
+    scales: {
+      x: {
+        grid: { color: "rgba(0,0,0,0.04)" },
+        ticks: { color: textColor },
+      },
+      y: {
+        grid: { display: false },
+        ticks: { color: textColor, font: { size: 13 } },
+      },
+    },
+  };
+
+  // top widget: use white card + colored icon badge
+  const widgetBox = (
+    accent: string,
+    icon: React.ReactNode,
+    label: string,
+    value: string | number
+  ) => (
+    <Paper
+      sx={{
+        bgcolor: "#fff",
+        color: textColor,
+        p: 2,
+        borderRadius: 2,
+        display: "flex",
+        alignItems: "center",
+        minHeight: 100,
+        border: "1px solid rgba(15,23,42,0.06)",
+        boxShadow: "0 1px 6px rgba(15,23,42,0.06)",
+        width: "100%",
+        boxSizing: "border-box",
+      }}
+    >
+      <Box
+        sx={{
+          width: 44,
+          height: 44,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          borderRadius: 1.5,
+          mr: 2,
+          bgcolor: alpha(accent, 0.12),
+          color: accent,
+          flexShrink: 0,
+        }}
+      >
+        {icon}
+      </Box>
+      <Box sx={{ flex: 1 }}>
+        <Typography fontWeight={700} fontSize={14} color="text.secondary">
+          {label}
+        </Typography>
+        <Typography fontWeight={700} fontSize={18} mt={0.5}>
+          {typeof value === "number"
+            ? value.toLocaleString(undefined, { minimumFractionDigits: 2 })
+            : value}
+        </Typography>
+      </Box>
+    </Paper>
+  );
+
+  return (
+    <Box
+      sx={{
+        p: { xs: 2, sm: 3 },
+        width: "100%",
+        boxSizing: "border-box",
+        bgcolor: "transparent",
+      }}
+    >
+      <Backdrop open={loading} sx={{ color: "#fff", zIndex: 9999 }}>
+        <CircularProgress color="inherit" />
+      </Backdrop>
+
+      <Box
+        mb={2}
+        display="flex"
+        alignItems="center"
+        justifyContent="space-between"
+        sx={{
+          flexDirection: { xs: "column", sm: "row" },
+          alignItems: { xs: "flex-start", sm: "center" },
+        }}
+      >
+        <Box>
+          <Typography variant="h5" fontWeight={700}>
+            Welcome, Admin
+          </Typography>
+          <Typography variant="body2" color="text.secondary" mb={2}>
+            You have {ordersToday.toLocaleString()} Orders Today
+          </Typography>
+        </Box>
+
+        <LocalizationProvider dateAdapter={AdapterDateFns}>
+          <MBox
+            sx={{
+              flexDirection: { xs: "column", sm: "row" },
+              alignItems: { xs: "flex-start", sm: "center" },
+            }}
+            display="flex"
+            gap={1}
+            alignItems="center"
+          >
+            <DatePicker
+              label="From"
+              value={filterFrom}
+              onChange={(newVal) => setFilterFrom(newVal)}
+              slotProps={{
+                textField: {
+                  size: "small",
+                  placeholder: "From",
+                  sx: {
+                    width: { xs: "100%", sm: 200 },
+                    bgcolor: "#fafbfc",
+                    "& .MuiInputBase-root": { height: 40 },
+                  },
+                },
+              }}
+            />
+            <DatePicker
+              label="To"
+              value={filterTo}
+              onChange={(newVal) => setFilterTo(newVal)}
+              slotProps={{
+                textField: {
+                  size: "small",
+                  placeholder: "To",
+                  sx: {
+                    width: { xs: "100%", sm: 200 },
+                    bgcolor: "#fafbfc",
+                    "& .MuiInputBase-root": { height: 40 },
+                  },
+                },
+              }}
+            />
+            <Box gap={2} display="flex">
+              <Button
+                variant="contained"
+                size="small"
+                onClick={applyDateFilter}
+              >
+                Apply
+              </Button>
+              <Button variant="outlined" size="small" onClick={clearDateFilter}>
+                Clear
+              </Button>
+            </Box>
+          </MBox>
+        </LocalizationProvider>
+        {/* date filters (right side of title) */}
+      </Box>
+
+      {/* Top widgets */}
+      <Grid container spacing={2} mb={2}>
+        <Grid item xs={12} sm={6} md={3}>
+          {widgetBox(
+            "#27ae60",
+            <TrendingUpIcon />,
+            "All Time Gross Profit",
+            Number(allTime.grossProfit || 0).toLocaleString()
+          )}
+        </Grid>
+
+        <Grid item xs={12} sm={6} md={3}>
+          {widgetBox(
+            "#2980b9",
+            <ShoppingCartIcon />,
+            "Total Sold Price",
+            Number(allTime.sales || 0).toLocaleString()
+          )}
+        </Grid>
+
+        <Grid item xs={12} sm={6} md={3}>
+          {widgetBox(
+            "#27ae60",
+            <AccountBalanceWalletIcon />,
+            "Total Received Payments",
+            Number(
+              (allTime as any).totalPaymentsAccomplies || 0
+            ).toLocaleString()
+          )}
+        </Grid>
+
+        <Grid item xs={12} sm={6} md={3}>
+          {widgetBox(
+            "#c0392b",
+            <ReportProblemIcon />,
+            "Total Unreceived Payments",
+            // compute outstanding = total sold price - total payments received; floor at 0
+            Math.max(
+              0,
+              Number(allTime.sales || 0) -
+                Number((allTime as any).totalPaymentsAccomplies || 0)
+            )
+          )}
+        </Grid>
+      </Grid>
+
+      {/* Second row widgets */}
+      <Grid container spacing={2} mb={4}>
+        <Grid item xs={12} sm={6} md={3}>
+          {widgetBox(
+            "#6c7a89",
+            <AssignmentIcon />,
+            "Total Purchase Orders",
+            Number((allTime as any).totalPurchaseOrders || 0).toLocaleString()
+          )}
+        </Grid>
+
+        <Grid item xs={12} sm={6} md={3}>
+          {widgetBox(
+            "#27ae60",
+            <AccountBalanceWalletIcon />,
+            "Total Paid Orders",
+            Number((allTime as any).totalPaidOrders || 0).toLocaleString()
+          )}
+        </Grid>
+
+        <Grid item xs={12} sm={6} md={3}>
+          {widgetBox(
+            "#c0392b",
+            <ReportProblemIcon />,
+            "Total Unpaid Orders",
+            Number((allTime as any).totalUnpaidOrders || 0).toLocaleString()
+          )}
+        </Grid>
+
+        <Grid item xs={12} sm={6} md={3}>
+          {widgetBox(
+            "#8e44ad",
+            <HourglassEmptyIcon />,
+            "Total Paid Orders Partially",
+            Number(
+              (allTime as any).totalPaidOrdersPartially || 0
+            ).toLocaleString()
+          )}
+        </Grid>
+      </Grid>
+
+      {/* Second row widgets */}
+      <Stack
+        direction={isMobile ? "column" : "row"}
+        spacing={0}
+        sx={{ gap: 2 }}
+        mb={2}
+      >
+        <Paper
+          sx={{
+            bgcolor: "#fff",
+            color: textColor,
+            flex: 1,
+            width: "100%",
+            boxSizing: "border-box",
+            p: 2,
+            borderRadius: 2,
+            border: "1px solid rgba(15,23,42,0.06)",
+            boxShadow: "0 1px 6px rgba(15,23,42,0.06)",
+          }}
+        >
+          <Typography fontWeight={700} fontSize={18}>
+            Gross Profit Margin
+          </Typography>
+          <Box sx={{ display: "flex", alignItems: "center", mt: 1 }}>
+            <PieChartIcon sx={{ fontSize: 40, color: "#f39c12", mr: 2 }} />
+            <Typography fontWeight={700} fontSize={28}>
+              {allTime.grossProfitMargin}%
+            </Typography>
+          </Box>
+          <LinearProgress
+            variant="determinate"
+            value={Math.max(0, Math.min(100, allTime.grossProfitMargin))}
+            sx={{
+              height: 10,
+              borderRadius: 5,
+              bgcolor: "rgba(15,23,42,0.04)",
+              "& .MuiLinearProgress-bar": { bgcolor: "#f39c12" },
+              mt: 2,
+            }}
+          />
+        </Paper>
+
+        <Paper
+          sx={{
+            bgcolor: "#fff",
+            color: textColor,
+            flex: 1,
+            width: "100%",
+            boxSizing: "border-box",
+            p: 2,
+            borderRadius: 2,
+            border: "1px solid rgba(15,23,42,0.06)",
+            boxShadow: "0 1px 6px rgba(15,23,42,0.06)",
+          }}
+        >
+          <Typography fontWeight={700} fontSize={18}>
+            All-time Expense
+          </Typography>
+          <Box sx={{ display: "flex", alignItems: "center", mt: 1 }}>
+            <ReceiptIcon sx={{ fontSize: 40, color: "#c0392b", mr: 2 }} />
+            <Typography fontWeight={700} fontSize={28}>
+              {allTime.expenses.toLocaleString(undefined, {
+                minimumFractionDigits: 2,
+              })}
+            </Typography>
+          </Box>
+        </Paper>
+      </Stack>
+
+      {/* Main charts and lists */}
+      <Stack
+        direction={isMobile ? "column" : "row"}
+        spacing={0}
+        sx={{ gap: 2 }}
+        mb={2}
+      >
+        <Paper sx={{ ...chartCardSx, width: "100%", boxSizing: "border-box" }}>
+          <Typography fontWeight={700} fontSize={20} mb={1}>
+            Daily Sales Trend
+          </Typography>
+          <BarChart data={dailyChart} options={chartOptions} height={180} />
+          <Typography fontSize={14} color="text.secondary" mt={1}>
+            Peak{" "}
+            {Math.max(...(dailyChart.datasets[0]?.data || [0])).toLocaleString(
+              undefined,
+              {
+                minimumFractionDigits: 2,
+              }
+            )}
+          </Typography>
+        </Paper>
+
+        <Paper sx={{ ...chartCardSx, width: "100%", boxSizing: "border-box" }}>
+          <Typography fontWeight={700} fontSize={20} mb={1}>
+            Monthly Sales Trend
+          </Typography>
+          <BarChart data={monthlyChart} options={chartOptions} height={180} />
+          <Typography fontSize={14} color="text.secondary" mt={1}>
+            Peak{" "}
+            {Math.max(
+              ...(monthlyChart.datasets[0]?.data || [0])
+            ).toLocaleString(undefined, {
+              minimumFractionDigits: 2,
+            })}
+          </Typography>
+        </Paper>
+      </Stack>
+
+      {/* Bestselling and channels */}
+      <Stack
+        direction={isMobile ? "column" : "row"}
+        spacing={0}
+        sx={{ gap: 2 }}
+        mb={2}
+      >
+        <Paper
+          sx={{
+            flex: 1,
+            width: "100%",
+            boxSizing: "border-box",
+            bgcolor: "#fff",
+            color: textColor,
+            p: 3,
+            borderRadius: 2,
+            border: "1px solid rgba(15,23,42,0.06)",
+            boxShadow: "0 1px 6px rgba(15,23,42,0.06)",
+            minWidth: 0,
+            display: "flex",
+            flexDirection: "column",
+            justifyContent: "center",
+          }}
+        >
+          <Typography fontWeight={700} fontSize={16} mb={2}>
+            Top Sales Channel
+          </Typography>
+          <BarChart
+            data={{
+              labels: topChannels.map((ch) => ch.name),
+              datasets: [
+                {
+                  data: topChannels.map((ch) => ch.total),
+                  backgroundColor: "#4f8cff",
+                  borderRadius: 8,
+                  barPercentage: 0.7,
+                  categoryPercentage: 0.7,
+                  maxBarThickness: 32,
+                },
+              ],
+            }}
+            options={horizontalBarOptions}
+            height={180}
+          />
+        </Paper>
+
+        <Paper
+          sx={{
+            flex: 1,
+            width: "100%",
+            boxSizing: "border-box",
+            bgcolor: "#fff",
+            color: textColor,
+            p: 3,
+            borderRadius: 2,
+            border: "1px solid rgba(15,23,42,0.06)",
+            boxShadow: "0 1px 6px rgba(15,23,42,0.06)",
+            minWidth: 0,
+            display: "flex",
+            flexDirection: "column",
+            justifyContent: "center",
+          }}
+        >
+          <Typography fontWeight={700} fontSize={16} mb={2}>
+            Top 10 best selling items / services
+          </Typography>
+          <BarChart
+            data={{
+              labels: bestsellers.map((ch) => ch.name),
+              datasets: [
+                {
+                  data: bestsellers.map((ch) => ch.total),
+                  backgroundColor: "#4f8cff",
+                  borderRadius: 8,
+                  barPercentage: 0.7,
+                  categoryPercentage: 0.7,
+                  maxBarThickness: 32,
+                },
+              ],
+            }}
+            options={horizontalBarOptions}
+            height={180}
+          />
+        </Paper>
+      </Stack>
+
+      <Stack
+        direction={isMobile ? "column" : "row"}
+        spacing={0}
+        sx={{ gap: 2 }}
+        mb={2}
+      >
+        <Paper
+          sx={{
+            flex: 1,
+            width: "100%",
+            boxSizing: "border-box",
+            bgcolor: "#fff",
+            color: textColor,
+            p: 3,
+            borderRadius: 2,
+            border: "1px solid rgba(15,23,42,0.06)",
+            boxShadow: "0 1px 6px rgba(15,23,42,0.06)",
+            minWidth: 0,
+            display: "flex",
+            flexDirection: "column",
+            justifyContent: "center",
+          }}
+        >
+          <Typography fontWeight={700} fontSize={16} mb={2}>
+            Expense Distribution
+          </Typography>
+          <Box
+            sx={{
+              display: "flex",
+              alignItems: "center",
+              width: "100%",
+              justifyContent: "center",
+              gap: 4,
+              px: 2,
+            }}
+          >
+            <Box sx={{ width: 160, height: 160, flexShrink: 0 }}>
+              <Doughnut
+                data={{
+                  labels: expenseDist.map((e) => e.name),
+                  datasets: [
+                    {
+                      data: expenseDist.map((e) => e.total),
+                      backgroundColor: [
+                        "#4f8cff",
+                        "#ff5c5c",
+                        "#ffd966",
+                        "#4fd18b",
+                        "#7c4fff",
+                        "#ffb366",
+                        "#6ec6ff",
+                        "#a3e635",
+                        "#f9e79f",
+                      ],
+                    },
+                  ],
+                }}
+                options={{
+                  plugins: { legend: { display: false } },
+                  cutout: "70%",
+                }}
+              />
+            </Box>
+
+            <Box
+              sx={{ flex: 1, display: "flex", flexDirection: "column", gap: 1 }}
+            >
+              {expenseDist.slice(0, 6).map((e, idx) => (
+                <Stack
+                  direction="row"
+                  alignItems="center"
+                  spacing={1}
+                  key={e.name}
+                >
+                  <Box
+                    sx={{
+                      width: 14,
+                      height: 14,
+                      borderRadius: "50%",
+                      bgcolor: [
+                        "#4f8cff",
+                        "#ff5c5c",
+                        "#ffd966",
+                        "#4fd18b",
+                        "#7c4fff",
+                        "#ffb366",
+                        "#6ec6ff",
+                        "#a3e635",
+                        "#f9e79f",
+                      ][idx % 9],
+                    }}
+                  />
+                  <Typography fontSize={14} color="text.primary">
+                    {e.name}
+                  </Typography>
+                </Stack>
+              ))}
+              {expenseDist.length > 6 && (
+                <Typography fontSize={13} color="text.secondary" mt={0.5}>
+                  {expenseDist.length - 6} more
+                </Typography>
+              )}
+            </Box>
+          </Box>
+        </Paper>
+
+        <Paper
+          sx={{
+            flex: 1,
+            width: "100%",
+            boxSizing: "border-box",
+            bgcolor: "#fff",
+            color: textColor,
+            p: 3,
+            borderRadius: 2,
+            border: "1px solid rgba(15,23,42,0.06)",
+            boxShadow: "0 1px 6px rgba(15,23,42,0.06)",
+            minWidth: 0,
+            display: "flex",
+            flexDirection: "column",
+            justifyContent: "flex-start",
+            alignItems: "flex-start",
+          }}
+        >
+          <Typography
+            fontWeight={700}
+            fontSize={16}
+            mb={2}
+            sx={{ ml: 0.5, mt: 0 }}
+          >
+            Annual Sales Revenue Target
+          </Typography>
+          <Box
+            sx={{
+              display: "flex",
+              alignItems: "center",
+              width: "100%",
+              mt: 2,
+              gap: 4,
+            }}
+          >
+            <Box sx={{ position: "relative", width: 160, height: 160 }}>
+              <Doughnut
+                data={{
+                  labels: ["Current", "Remaining"],
+                  datasets: [
+                    {
+                      data: [
+                        allTime.sales,
+                        Math.max(SALES_TARGET - allTime.sales, 0),
+                      ],
+                      backgroundColor: ["#4fd18b", "#e6e7ee"],
+                      borderWidth: 0,
+                    },
+                  ],
+                }}
+                options={{
+                  cutout: "70%",
+                  plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                      callbacks: {
+                        label: (ctx: any) =>
+                          ctx.label === "Current"
+                            ? `Current: ${allTime.sales.toLocaleString(
+                                undefined,
+                                { minimumFractionDigits: 2 }
+                              )}`
+                            : `Remaining: ${Math.max(
+                                SALES_TARGET - allTime.sales,
+                                0
+                              ).toLocaleString(undefined, {
+                                minimumFractionDigits: 2,
+                              })}`,
+                      },
+                    },
+                  },
+                }}
+              />
+              <Box
+                sx={{
+                  position: "absolute",
+                  top: 0,
+                  left: 0,
+                  width: "100%",
+                  height: "100%",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  pointerEvents: "none",
+                }}
+              >
+                <Typography fontWeight={700} fontSize={20} color="#4fd18b">
+                  {Math.round((allTime.sales / SALES_TARGET) * 100)}%
+                </Typography>
+              </Box>
+            </Box>
+
+            <Box sx={{ ml: 2 }}>
+              <Typography fontSize={14} color="text.secondary">
+                Current
+              </Typography>
+              <Typography fontWeight={700} fontSize={18} mb={1}>
+                {allTime.sales.toLocaleString(undefined, {
+                  minimumFractionDigits: 2,
+                })}
+              </Typography>
+              <Typography fontSize={14} color="text.secondary">
+                Goal
+              </Typography>
+              <Typography fontWeight={700} fontSize={18}>
+                {SALES_TARGET.toLocaleString(undefined, {
+                  minimumFractionDigits: 2,
+                })}
+              </Typography>
+            </Box>
+          </Box>
+        </Paper>
+      </Stack>
+    </Box>
+  );
+};
+
+export default Dashboard;
