@@ -57,6 +57,7 @@ const Products: React.FC = () => {
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [totalProducts, setTotalProducts] = useState(0);
   const [loading, setLoading] = useState(false);
+  const [importing, setImporting] = useState(false);
 
   // Product table states
   // searchInput: controlled input in the UI
@@ -71,6 +72,7 @@ const Products: React.FC = () => {
   const navigate = useNavigate();
   const user = useContext(UserContext);
   const { showSuccess, showError } = useNotification();
+  const fileInputRef = React.useRef<HTMLInputElement | null>(null);
 
   const fetchProducts = async (searchValue?: string) => {
     setLoading(true);
@@ -303,6 +305,36 @@ const Products: React.FC = () => {
     }
   };
 
+  const handleImportClick = () => {
+    if (fileInputRef.current) fileInputRef.current.value = "";
+    fileInputRef.current?.click();
+  };
+
+  const handleImportFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setImporting(true);
+    const formData = new FormData();
+    formData.append("file", file);
+    try {
+      const resp = await axiosInstance.post("/import-products", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+      if (resp.data && resp.data.inserted > 0) {
+        showSuccess(`Imported ${resp.data.inserted} products successfully.`);
+        fetchProducts();
+      } else if (resp.data && resp.data.errors?.length) {
+        showError(`Some rows failed: ${resp.data.errors.map((e:any)=>`Row ${e.row}`).join(", ")}`);
+      } else {
+        showError("Import completed, but no products were added.");
+      }
+    } catch (err: any) {
+      showError(err?.response?.data?.error || "Import failed");
+    } finally {
+      setImporting(false);
+    }
+  };
+
   return (
     <Box sx={{ p: { xs: 2, sm: 3, md: 4 } }}>
       <Backdrop
@@ -400,9 +432,7 @@ const Products: React.FC = () => {
               <Button
                 variant="contained"
                 aria-label="Import"
-                onClick={() => {
-                  /* keep existing handler if any */
-                }}
+                onClick={handleImportClick}
                 sx={{
                   bgcolor: "#111",
                   color: "#fff",
@@ -415,14 +445,20 @@ const Products: React.FC = () => {
                   display: "inline-flex",
                   alignItems: "center",
                 }}
+                disabled={importing}
               >
                 <CloudUploadIcon sx={{ mr: { xs: 0, sm: 1 } }} />
-                <Box
-                  component="span"
-                  sx={{ display: { xs: "none", sm: "inline-block" } }}
-                >
+                <Box component="span" sx={{ display: { xs: "none", sm: "inline-block" } }}>
                   IMPORT
                 </Box>
+                <input
+                  type="file"
+                  accept=".xlsx,.xls"
+                  ref={fileInputRef}
+                  style={{ display: "none" }}
+                  onChange={handleImportFile}
+                  disabled={importing}
+                />
               </Button>
             </HasPermission>
             <HasPermission module="Products" action="Create">
