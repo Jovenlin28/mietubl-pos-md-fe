@@ -42,6 +42,8 @@ export interface ExpenseFormValues {
   vendorName?: string;
   tinNo?: string;
   businessAddress?: string;
+  /** Optional: where the expense was funded from */
+  sourceOfFund?: string;
   // added attachment support
   attachment?: File | null;
 }
@@ -56,6 +58,7 @@ const validationSchema = Yup.object({
   vendorName: Yup.string(),
   tinNo: Yup.string(),
   businessAddress: Yup.string(),
+  sourceOfFund: Yup.string().nullable(),
   attachment: Yup.mixed().nullable(),
 });
 
@@ -153,8 +156,7 @@ const ExpenseAddModal: React.FC<ExpenseAddModalProps> = ({
       receiptNo: "",
       vendorName: "",
       tinNo: "",
-      businessAddress: "",
-      attachment: null,
+      businessAddress: "",      sourceOfFund: "",      attachment: null,
     },
     validationSchema,
     enableReinitialize: true,
@@ -202,6 +204,7 @@ const ExpenseAddModal: React.FC<ExpenseAddModalProps> = ({
           status: values.status || null,
           receiptNo: values.receiptNo || null,
           vendorName: values.vendorName || null,
+          sourceOfFund: values.sourceOfFund || null,
           tinNo: values.tinNo || null,
           businessAddress: values.businessAddress || null,
           attachment: attachmentUrl || null,
@@ -620,6 +623,19 @@ const ExpenseAddModal: React.FC<ExpenseAddModalProps> = ({
               helperText={formik.touched.tinNo && formik.errors.tinNo}
             />
           </Stack>
+
+          <TextField
+            label="Source of Fund"
+            fullWidth
+            name="sourceOfFund"
+            value={(formik.values as any).sourceOfFund || ""}
+            onChange={formik.handleChange}
+            onBlur={formik.handleBlur}
+            error={Boolean((formik.touched as any).sourceOfFund && (formik.errors as any).sourceOfFund)}
+            helperText={(formik.touched as any).sourceOfFund && (formik.errors as any).sourceOfFund}
+            sx={{ mb: 2 }}
+          />
+
           <TextField
             label="Business Address"
             fullWidth

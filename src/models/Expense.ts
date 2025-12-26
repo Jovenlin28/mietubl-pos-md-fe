@@ -9,6 +9,8 @@ export interface Expense {
   vendorName?: string;
   tinNo?: string;
   businessAddress?: string;
+  /** Optional: where the expense was funded from */
+  sourceOfFund?: string;
   createdOn?: string;
   attachment?: string;
 }

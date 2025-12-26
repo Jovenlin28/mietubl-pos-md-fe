@@ -689,6 +689,8 @@ const ExpenseListing: React.FC = () => {
                   </TableSortLabel>
                 </TableCell>
 
+                <TableCell sx={{ fontWeight: 700 }}>Source of Fund</TableCell>
+
                 <TableCell sx={{ fontWeight: 700 }}>TIN No.</TableCell>
                 <TableCell sx={{ fontWeight: 700 }}>Business Address</TableCell>
                 <TableCell sx={{ fontWeight: 700, textAlign: "center" }}>
@@ -781,6 +783,7 @@ const ExpenseListing: React.FC = () => {
                       : ""}
                   </TableCell>
                   <TableCell>{row.vendorName}</TableCell>
+                  <TableCell>{row.sourceOfFund || "-"}</TableCell>
                   <TableCell>{row.tinNo}</TableCell>
                   <TableCell>{row.businessAddress}</TableCell>
                   <TableCell align="center">
@@ -812,7 +815,7 @@ const ExpenseListing: React.FC = () => {
               ))}
               {expenses.length === 0 && !loading && (
                 <TableRow>
-                  <TableCell colSpan={12} align="center">
+                  <TableCell colSpan={14} align="center">
                     No records found
                   </TableCell>
                 </TableRow>
@@ -855,8 +858,7 @@ const ExpenseListing: React.FC = () => {
                 totalCost: String(selectedExpense.totalCost || ""),
                 status: selectedExpense.status || "Fulfilled",
                 receiptNo: selectedExpense.receiptNo || "",
-                vendorName: selectedExpense.vendorName || "",
-                tinNo: selectedExpense.tinNo || "",
+                vendorName: selectedExpense.vendorName || "",                sourceOfFund: selectedExpense.sourceOfFund || "",                tinNo: selectedExpense.tinNo || "",
                 businessAddress: selectedExpense.businessAddress || "",
                 attachment: selectedExpense.attachment || "",
               } as any)
