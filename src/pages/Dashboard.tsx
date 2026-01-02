@@ -293,17 +293,6 @@ const Dashboard: React.FC = () => {
     fetchCategories();
   }, []);
 
-  // handlers for date filter UI
-  // month filter handlers
-  const applyMonthFilter = () => {
-    loadSummary(getMonthParam(), selectedCategoryName);
-  };
-  const clearMonthFilter = () => {
-    setMonthIndex(new Date().getMonth());
-    setSelectedCategoryName(null);
-    loadSummary(getMonthParam(new Date().getMonth()));
-  };
-
   // lighter card style
   const chartCardSx = {
     flex: 2,
@@ -490,6 +479,33 @@ const Dashboard: React.FC = () => {
             </Select>
           </FormControl>
 
+          <FormControl
+            size="small"
+            sx={{
+              width: { xs: "100%", sm: 140 },
+              bgcolor: "#fafbfc",
+              "& .MuiInputBase-root": { height: 40 },
+            }}
+          >
+            <InputLabel>Year</InputLabel>
+            <Select
+              label="Year"
+              value={year}
+              onChange={(e) => {
+                const v = Number(e.target.value);
+                setYear(v);
+                // refresh using currently selected month index
+                loadSummary(getMonthParam(monthIndex, v), selectedCategoryName);
+              }}
+            >
+              {([new Date().getFullYear(), new Date().getFullYear() - 1]).map((y) => (
+                <MenuItem key={y} value={y}>
+                  {y}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+
           <TextField
             select
             label="Category"
@@ -528,6 +544,7 @@ const Dashboard: React.FC = () => {
               onClick={() => {
                 setMonthIndex(new Date().getMonth());
                 setSelectedCategoryName(null);
+                setYear(new Date().getFullYear());
                 loadSummary(getMonthParam(new Date().getMonth()));
               }}
             >
