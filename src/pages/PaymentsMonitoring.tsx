@@ -379,6 +379,31 @@ const PaymentsMonitoring: React.FC = () => {
     opts?: { isChild?: boolean; groupKey?: string }
   ) => {
     const isChild = !!opts?.isChild;
+    // compute due-date status badge for unpaid payments
+    let dueBadge: React.ReactNode = null;
+    if (row.dueDate && String(row.paymentStatus || "").toLowerCase() === "unpaid") {
+      const due = new Date(row.dueDate);
+      const today = new Date();
+      const msPerDay = 1000 * 60 * 60 * 24;
+      const dueDateOnly = new Date(due.getFullYear(), due.getMonth(), due.getDate());
+      const todayOnly = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+      const diff = Math.ceil((dueDateOnly.getTime() - todayOnly.getTime()) / msPerDay);
+      let label = "";
+      let badgeSx: any = {};
+      if (diff > 0) {
+        label = `Due in ${diff} day${diff > 1 ? "s" : ""}`;
+        badgeSx = { bgcolor: "#ffb74d", color: "#000", fontWeight: 700, mt: 1 };
+      } else if (diff === 0) {
+        label = "Due today";
+        badgeSx = { bgcolor: "#fb8c00", color: "#fff", fontWeight: 700, mt: 1 };
+      } else {
+        const od = Math.abs(diff);
+        label = `Overdue by ${od} day${od > 1 ? "s" : ""}`;
+        badgeSx = { bgcolor: "#ef5350", color: "#fff", fontWeight: 700, mt: 1 };
+      }
+      dueBadge = <Chip label={label} size="small" sx={badgeSx} />;
+    }
+
     return (
       <>
         {/* PO Number (hidden for children) */}
@@ -572,15 +597,18 @@ const PaymentsMonitoring: React.FC = () => {
         {/* Due Date */}
         <TableCell>
           {row.dueDate ? (
-            <Chip
-              label={new Date(row.dueDate).toLocaleDateString()}
-              size="small"
-              sx={{
-                bgcolor: "#ef5350",   // light red (adjust if you want lighter: #e57373 or #f44336)
-                color: "#fff",
-                fontWeight: 700,
-              }}
-            />
+            <Box sx={{ display: "flex", flexDirection: "column", gap: 0 }}>
+              <Chip
+                label={new Date(row.dueDate).toLocaleDateString()}
+                size="small"
+                sx={{
+                  bgcolor: "#fafbfc",
+                  color: "#333",
+                  fontWeight: 700,
+                }}
+              />
+              {dueBadge}
+            </Box>
           ) : (
             "-"
           )}

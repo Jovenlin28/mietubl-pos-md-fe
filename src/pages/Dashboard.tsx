@@ -11,6 +11,10 @@ import {
   TextField,
   Button,
   Box as MBox,
+  MenuItem,
+  FormControl,
+  InputLabel,
+  Select,
 } from "@mui/material";
 import { Bar as BarChart, Doughnut } from "react-chartjs-2";
 import {
@@ -39,8 +43,7 @@ import AssignmentIcon from "@mui/icons-material/Assignment";
 import AccountBalanceWalletIcon from "@mui/icons-material/AccountBalanceWallet";
 import ReportProblemIcon from "@mui/icons-material/ReportProblem";
 import HourglassEmptyIcon from "@mui/icons-material/HourglassEmpty";
-import { DatePicker, LocalizationProvider } from "@mui/x-date-pickers";
-import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
+
 ChartJS.register(
   CategoryScale,
   LinearScale,
@@ -75,12 +78,17 @@ const Dashboard: React.FC = () => {
     grossProfitMargin: 0,
     sales: 0,
     expenses: 0,
+    totalPurchaseOrders: 0,
+    totalPaidOrders: 0,
+    totalPaidOrdersPartially: 0,
+    totalUnpaidOrders: 0,
+    totalPaymentsAccomplies: 0,
   });
-  const [today, setToday] = useState({
-    sales: 0,
-    itemsSold: 0,
-    expenses: 0,
-  });
+  // const [today, setToday] = useState({
+  //   sales: 0,
+  //   itemsSold: 0,
+  //   expenses: 0,
+  // });
   // number of orders (sales records) for today
   const [ordersToday, setOrdersToday] = useState<number>(0);
   const [bestsellers, setBestsellers] = useState<any[]>([]);
@@ -124,35 +132,27 @@ const Dashboard: React.FC = () => {
       },
     ],
   });
-  const [filterFrom, setFilterFrom] = useState<Date | null>(null);
-  const [filterTo, setFilterTo] = useState<Date | null>(null);
+  const [monthIndex, setMonthIndex] = useState<number>(new Date().getMonth());
+  const [year, setYear] = useState<number>(new Date().getFullYear());
+  const [categories, setCategories] = useState<any[]>([]);
+  const [selectedCategoryName, setSelectedCategoryName] = useState<string | null>(null);
 
   const theme = useTheme();
   const isMobile = useMediaQuery("(max-width:800px)");
   const textColor = theme.palette.text.primary;
 
-  const formatDateParam = (d: Date | null) => {
-    if (!d) return "";
-    return d.toISOString().slice(0, 10);
-  };
+  const getMonthParam = (mIndex = monthIndex, y = year) => `${y}-${String(mIndex + 1).padStart(2, "0")}`;
 
-  // move loader function out so Apply can call it
-  const loadSummary = async (dateFrom?: Date, dateTo?: Date) => {
+  // move loader function out so UI controls can call it
+  const loadSummary = async (monthParam?: string, categoryName?: string | null) => {
     setLoading(true);
     try {
-      const q: any = {};
-      const fromStr = formatDateParam(dateFrom ?? null);
-      const toStr = formatDateParam(dateTo ?? null);
-      if (dateFrom) q.dateFrom = fromStr;
-      if (dateTo) q.dateTo = toStr;
+      const m = monthParam ?? getMonthParam();
+      const params = new URLSearchParams();
+      if (m) params.append("month", m);
+      if (categoryName) params.append("category", categoryName);
 
-      const url =
-        "/dashboard/summary" +
-        (Object.keys(q).length
-          ? `?dateFrom=${encodeURIComponent(
-              fromStr
-            )}&dateTo=${encodeURIComponent(toStr)}`
-          : "");
+      const url = "/dashboard/summary" + (params.toString() ? `?${params.toString()}` : "");
       const { data } = await axiosInstance.get(url);
 
       // top-level summary
@@ -176,11 +176,11 @@ const Dashboard: React.FC = () => {
         ),
       });
 
-      setToday({
-        sales: Number(data.salesToday || 0),
-        itemsSold: Number(data.itemsSoldToday || 0),
-        expenses: Number(data.expensesToday || 0),
-      });
+      // setToday({
+      //   sales: Number(data.salesToday || 0),
+      //   itemsSold: Number(data.itemsSoldToday || 0),
+      //   expenses: Number(data.expensesToday || 0),
+      // });
 
       // labels: if backend returned dailyLabels use them; otherwise generate by current month
       let labels: string[] = [];
@@ -277,18 +277,31 @@ const Dashboard: React.FC = () => {
     // Guard so we don't fire twice in React 18 StrictMode (dev)
     if (didLoadRef.current) return;
     didLoadRef.current = true;
-    loadSummary();
+    loadSummary(getMonthParam());
+  }, []);
+
+  // load categories for dropdown
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const { data } = await axiosInstance.get("/categories");
+        setCategories(Array.isArray(data) ? data : []);
+      } catch (err) {
+        // ignore
+      }
+    };
+    fetchCategories();
   }, []);
 
   // handlers for date filter UI
-  const applyDateFilter = () => {
-    if (!filterFrom || !filterTo) return loadSummary(); // fallback: no filter
-    loadSummary(filterFrom, filterTo);
+  // month filter handlers
+  const applyMonthFilter = () => {
+    loadSummary(getMonthParam(), selectedCategoryName);
   };
-  const clearDateFilter = () => {
-    setFilterFrom(null);
-    setFilterTo(null);
-    loadSummary();
+  const clearMonthFilter = () => {
+    setMonthIndex(new Date().getMonth());
+    setSelectedCategoryName(null);
+    loadSummary(getMonthParam(new Date().getMonth()));
   };
 
   // lighter card style
@@ -437,66 +450,91 @@ const Dashboard: React.FC = () => {
             Welcome, Admin
           </Typography>
           <Typography variant="body2" color="text.secondary" mb={2}>
-            You have {ordersToday.toLocaleString()} Orders Today
+            You have {ordersToday.toLocaleString()} Orders this month
           </Typography>
         </Box>
 
-        <LocalizationProvider dateAdapter={AdapterDateFns}>
-          <MBox
+        <MBox
+          sx={{
+            flexDirection: { xs: "column", sm: "row" },
+            alignItems: { xs: "flex-start", sm: "center" },
+          }}
+          display="flex"
+          gap={1}
+          alignItems="center"
+        >
+          <FormControl
+            size="small"
             sx={{
-              flexDirection: { xs: "column", sm: "row" },
-              alignItems: { xs: "flex-start", sm: "center" },
+              width: { xs: "100%", sm: 200 },
+              bgcolor: "#fafbfc",
+              "& .MuiInputBase-root": { height: 40 },
             }}
-            display="flex"
-            gap={1}
-            alignItems="center"
           >
-            <DatePicker
-              label="From"
-              value={filterFrom}
-              onChange={(newVal) => setFilterFrom(newVal)}
-              slotProps={{
-                textField: {
-                  size: "small",
-                  placeholder: "From",
-                  sx: {
-                    width: { xs: "100%", sm: 200 },
-                    bgcolor: "#fafbfc",
-                    "& .MuiInputBase-root": { height: 40 },
-                  },
-                },
+            <InputLabel>Month</InputLabel>
+            <Select
+              label="Month"
+              value={monthIndex}
+              onChange={(e) => {
+                const v = Number(e.target.value);
+                setMonthIndex(v);
+                const m = getMonthParam(v);
+                loadSummary(m, selectedCategoryName);
               }}
-            />
-            <DatePicker
-              label="To"
-              value={filterTo}
-              onChange={(newVal) => setFilterTo(newVal)}
-              slotProps={{
-                textField: {
-                  size: "small",
-                  placeholder: "To",
-                  sx: {
-                    width: { xs: "100%", sm: 200 },
-                    bgcolor: "#fafbfc",
-                    "& .MuiInputBase-root": { height: 40 },
-                  },
-                },
+            >
+              {months.map((m, i) => (
+                <MenuItem key={m} value={i}>
+                  {m}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+
+          <TextField
+            select
+            label="Category"
+            size="small"
+            value={selectedCategoryName ?? ""}
+            onChange={(e) => {
+              const v = e.target.value === "" ? null : String(e.target.value);
+              setSelectedCategoryName(v);
+              loadSummary(getMonthParam(), v);
+            }}
+            sx={{
+              width: { xs: "100%", sm: 220 },
+              bgcolor: "#fafbfc",
+              "& .MuiInputBase-root": { height: 40 },
+            }}
+          >
+            <MenuItem value="">All</MenuItem>
+            {categories.map((c) => (
+              <MenuItem key={c.id} value={c.name}>
+                {c.name}
+              </MenuItem>
+            ))}
+          </TextField>
+
+          <Box gap={2} display="flex">
+            <Button
+              variant="contained"
+              size="small"
+              onClick={() => loadSummary(getMonthParam(), selectedCategoryName)}
+            >
+              Apply
+            </Button>
+            <Button
+              variant="outlined"
+              size="small"
+              onClick={() => {
+                setMonthIndex(new Date().getMonth());
+                setSelectedCategoryName(null);
+                loadSummary(getMonthParam(new Date().getMonth()));
               }}
-            />
-            <Box gap={2} display="flex">
-              <Button
-                variant="contained"
-                size="small"
-                onClick={applyDateFilter}
-              >
-                Apply
-              </Button>
-              <Button variant="outlined" size="small" onClick={clearDateFilter}>
-                Clear
-              </Button>
-            </Box>
-          </MBox>
-        </LocalizationProvider>
+            >
+              Clear
+            </Button>
+          </Box>
+        </MBox>
         {/* date filters (right side of title) */}
       </Box>
 
