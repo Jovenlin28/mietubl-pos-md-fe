@@ -44,6 +44,7 @@ import { Product } from "../models/Product";
 import HasPermission from "../components/HasPermission";
 import { UserContext } from "../layouts/DashboardLayout";
 import { useNotification } from "../hooks/useNotification";
+import { hi } from "date-fns/locale";
 
 const Products: React.FC = () => {
   const [categoriesList, setCategoriesList] = useState<string[]>([]);
@@ -672,7 +673,7 @@ const Products: React.FC = () => {
                           />
                         );
                       })()}
-                      <Typography sx={{ fontSize: 13 }}>
+                      <Typography sx={{ fontSize: 13, overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 350 }}>
                         {product.name}
                       </Typography>
                     </Stack>
