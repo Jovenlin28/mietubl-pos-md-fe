@@ -42,6 +42,7 @@ import ViewAttachmentModal from '../components/ViewAttachmentModal';
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import { DatePicker } from "@mui/x-date-pickers/DatePicker";
 import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
+import dayjs from "dayjs";
 import HasPermission from "../components/HasPermission";
 import { useNotification } from "../hooks/useNotification";
 
@@ -553,19 +554,19 @@ const DeliveriesMonitoring: React.FC = () => {
                       />
                     </TableCell>
                     <TableCell>{row.method || "-"}</TableCell>
-                    <TableCell>
+                    <TableCell sx={{ whiteSpace: 'nowrap' }}>
                       {row.processedDate
-                        ? new Date(row.processedDate).toLocaleString()
+                        ? dayjs(row.processedDate).format('MMM D, YYYY, h:mmA')
                         : "-"}
                     </TableCell>
-                    <TableCell>
+                    <TableCell sx={{ whiteSpace: 'nowrap' }}>
                       {row.pickedUpDate
-                        ? new Date(row.pickedUpDate).toLocaleString()
+                        ? dayjs(row.pickedUpDate).format('MMM D, YYYY, h:mmA')
                         : "-"}
                     </TableCell>
-                    <TableCell>
+                    <TableCell sx={{ whiteSpace: 'nowrap' }}>
                       {row.deliveredDate
-                        ? new Date(row.deliveredDate).toLocaleString()
+                        ? dayjs(row.deliveredDate).format('MMM D, YYYY, h:mmA')
                         : "-"}
                     </TableCell>
                     <TableCell>
@@ -591,9 +592,9 @@ const DeliveriesMonitoring: React.FC = () => {
                         
                       </Stack>
                     </TableCell>
-                    <TableCell>
+                    <TableCell sx={{ whiteSpace: 'nowrap' }}>
                       {row.createdOn
-                        ? new Date(row.createdOn).toLocaleString()
+                        ? dayjs(row.createdOn).format('MMM D, YYYY, h:mmA')
                         : "-"}
                     </TableCell>
                     <TableCell>

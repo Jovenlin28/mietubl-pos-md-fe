@@ -34,6 +34,7 @@ import DeleteIcon from "@mui/icons-material/Delete";
 import MoreVertIcon from "@mui/icons-material/MoreVert";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import ExpandLessIcon from "@mui/icons-material/ExpandLess";
+import dayjs from "dayjs";
 import Menu from "@mui/material/Menu";
 import MenuItem from "@mui/material/MenuItem";
 import ListItemIcon from "@mui/material/ListItemIcon";
@@ -158,7 +159,10 @@ const SalesListing: React.FC = () => {
 
   const formatDateParam = (d: Date | null) => {
     if (!d) return "";
-    return d.toISOString().slice(0, 10); // yyyy-mm-dd
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    return `${y}-${m}-${day}`; // yyyy-mm-dd (local date)
   };
 
   // Fetch sales from backend (supports fromDate/toDate)
@@ -1032,14 +1036,12 @@ const SalesListing: React.FC = () => {
 
                     {/* Created On */}
                     <TableCell>
-                      {row.createdOn
-                        ? new Date(row.createdOn).toLocaleString()
-                        : "-"}
+                      {row.createdOn ? dayjs(row.createdOn).format('MMM D, YYYY, h:mmA') : "-"}
                     </TableCell>
 
                     {/* Sale Date */}
                     <TableCell>
-                      {row.saleDate ? new Date(row.saleDate).toLocaleString() : "-"}
+                      {row.saleDate ? dayjs(row.saleDate).format('MMM D, YYYY, h:mmA') : "-"}
                     </TableCell>
 
                     {/* Customer Name */}

@@ -28,6 +28,7 @@ import DeleteIcon from "@mui/icons-material/Delete";
 import MoreVertIcon from "@mui/icons-material/MoreVert";
 import AttachMoneyIcon from "@mui/icons-material/AttachMoney";
 import CloseIcon from "@mui/icons-material/Close";
+import dayjs from "dayjs";
 import KeyboardArrowRightIcon from "@mui/icons-material/KeyboardArrowRight";
 import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
@@ -114,8 +115,13 @@ const PaymentsMonitoring: React.FC = () => {
   };
   const customerOpen = Boolean(customerAnchorEl);
 
-  const formatDateParam = (d: Date | null) =>
-    d ? d.toISOString().slice(0, 10) : "";
+  const formatDateParam = (d: Date | null) => {
+    if (!d) return "";
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    return `${y}-${m}-${day}`; // yyyy-mm-dd (local date)
+  };
 
   // fetch payments with optional date filters (page is 0-based)
   const fetchPayments = async (
@@ -553,20 +559,20 @@ const PaymentsMonitoring: React.FC = () => {
         </TableCell>
 
         {/* Created On */}
-        <TableCell>
-          {row.createdOn ? new Date(row.createdOn).toLocaleString() : ""}
+        <TableCell sx={{ whiteSpace: 'nowrap' }}>
+          {row.createdOn ? dayjs(row.createdOn).format('MMM D, YYYY, h:mmA') : ""}
         </TableCell>
 
         {/* Payment Date */}
-        <TableCell>
-          {row.paymentDate ? new Date(row.paymentDate).toLocaleString() : ""}
+        <TableCell sx={{ whiteSpace: 'nowrap' }}>
+          {row.paymentDate ? dayjs(row.paymentDate).format('MMM D, YYYY, h:mmA') : ""}
         </TableCell>
 
         {/* Sale Date */}
-        <TableCell>
-          { (row.sale && row.sale.saleDate) || row.saleDate
-            ? new Date(row.sale?.saleDate || row.saleDate).toLocaleString()
-            : "" }
+        <TableCell sx={{ whiteSpace: 'nowrap' }}>
+          {(row.sale && row.sale.saleDate) || row.saleDate
+            ? dayjs(row.sale?.saleDate || row.saleDate).format('MMM D, YYYY, h:mmA')
+            : ""}
         </TableCell>
 
         {/* Attachment */}
@@ -595,11 +601,11 @@ const PaymentsMonitoring: React.FC = () => {
         </TableCell>
 
         {/* Due Date */}
-        <TableCell>
+        <TableCell sx={{ whiteSpace: 'nowrap' }}>
           {row.dueDate ? (
             <Box sx={{ display: "flex", flexDirection: "column", gap: 0 }}>
               <Chip
-                label={new Date(row.dueDate).toLocaleDateString()}
+                label={dayjs(row.dueDate).format('MMM D, YYYY')}
                 size="small"
                 sx={{
                   bgcolor: "#fafbfc",
@@ -874,7 +880,7 @@ const PaymentsMonitoring: React.FC = () => {
 
                       {/* Expanded children rendered as aligned rows (no separate columns/header) */}
                       {hasChildren && isOpen
-                        ? grp.children.map((child) => (
+                        ? grp.children.map((child: any) => (
                             <TableRow
                               key={child.id}
                               sx={{ bgcolor: "#fafbfc" }}
