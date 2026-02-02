@@ -350,6 +350,35 @@ const AddSales: React.FC = () => {
         if (categoryValue) {
           await fetchCategoryProducts(categoryValue, true);
         }
+
+        // Preselect freebies category and load previously-saved freebies (if any)
+        if (Array.isArray(sale.freebies) && sale.freebies.length > 0) {
+          try {
+            // set freebies category select so the freebies UI is enabled
+            setFreebiesCategory(categoryValue);
+            // load freebie product options for that category
+            await fetchFreebieCategoryProducts(categoryValue);
+
+            // Map freebies returned by API to the UI shape (id = product id expected by submit)
+            const mappedFreebies = sale.freebies.map((f: any) => ({
+              id: f.product_id ?? f.id ?? null,
+              name: f.name ?? f.product_name ?? "",
+              sku: f.sku ?? "",
+              price: Number(f.price ?? 0),
+              qty: Number(f.qty ?? 0),
+              stock: 0,
+            }));
+
+            // fetch current stock for freebies where possible
+            const freebiesWithStock = await fetchProductsStock(mappedFreebies);
+            setSelectedFreebies(
+              freebiesWithStock.map((f: any) => ({ ...f, qty: Number(f.qty ?? 0) }))
+            );
+          } catch (e) {
+            console.warn("Failed to load existing freebies for sale", e);
+            setSelectedFreebies([]);
+          }
+        }
       } catch (err) {
         console.error("Failed to fetch sale", err);
       } finally {
