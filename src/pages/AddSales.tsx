@@ -39,6 +39,12 @@ const SALES_SCHEMA = Yup.object().shape({
   address: Yup.string(),
   notes: Yup.string(), // optional
   company: Yup.string(),
+  // optional agent commission percentage (0-100)
+  agentCommission: Yup.number()
+    .transform((value, originalValue) => (String(originalValue).trim() === "" ? null : value))
+    .nullable()
+    .min(0, "Agent commission must be >= 0")
+    .max(100, "Agent commission must be <= 100"),
   products: Yup.array()
     .of(
       Yup.object().shape({
@@ -117,6 +123,7 @@ const AddSales: React.FC = () => {
     address: string;
     company: string;
     notes: string;
+    agentCommission: number | string;
     products: FormikProduct[];
   }
 
@@ -132,6 +139,7 @@ const AddSales: React.FC = () => {
       address: "",
       company: "",
       notes: "", // new optional field
+      agentCommission: "",
       products: [],
     },
     validationSchema: SALES_SCHEMA,
@@ -150,6 +158,7 @@ const AddSales: React.FC = () => {
           company: values.company ?? "",
           address: values.address,
           notes: values.notes,
+          agentCommission: String(values.agentCommission).trim() === "" ? null : Number(values.agentCommission),
           products: values.products,
           // include freebies same shape as CreateProduct
           freebies: selectedFreebies.map((f) => ({
@@ -159,7 +168,7 @@ const AddSales: React.FC = () => {
             price: f.price,
             qty: Number(f.qty || 0),
           })),
-        };
+        }; 
 
         if (isEditMode && id) {
           await axiosInstance.put(`/sales/${id}`, payload);
@@ -329,6 +338,7 @@ const AddSales: React.FC = () => {
           company: sale.company ?? "",
           address: sale.address ?? "",
           notes: sale.notes ?? "",
+          agentCommission: sale.agentCommission ?? "",
           products: productsWithStock,
         });
 
@@ -636,15 +646,10 @@ const AddSales: React.FC = () => {
     await fetchCategoryProducts(newCategory, false);
   };
 
-  // Options minus already selected SKUs
-  const filteredProductOptions = useMemo(
-    () =>
-      (productCodes || []).filter(
-        (opt) =>
-          !(selectedCodes || []).some((c) => String(c.sku) === String(opt.sku))
-      ),
-    [productCodes, selectedCodes]
-  );
+  // Keep full product options list; rely on Autocomplete's filterSelectedOptions
+  // to prevent re-selecting already-selected items. This avoids MUI warnings when
+  // the `value` contains items that are not present in `options`.
+  const filteredProductOptions = useMemo(() => productCodes || [], [productCodes]);
 
   return (
     <Box sx={{ p: { xs: 2, sm: 3, md: 4 } }}>
@@ -897,6 +902,28 @@ const AddSales: React.FC = () => {
                 onChange={formik.handleChange}
                 sx={{ flex: 1 }}
               /> */}
+            </Box>
+
+            <Box sx={{ width: "100%", mb: 1 }}>
+              <TextField
+                label="Agent Commission (percentage)"
+                name="agentCommission"
+                type="number"
+                value={formik.values.agentCommission}
+                onChange={formik.handleChange}
+                sx={{ width: "100%" }}
+                inputProps={{ min: 0, max: 100, step: "0.01" }}
+                error={
+                  !!formik.errors.agentCommission &&
+                  (formik.touched.agentCommission || formik.submitCount > 0)
+                }
+                helperText={
+                  (formik.touched.agentCommission || formik.submitCount > 0) &&
+                  formik.errors.agentCommission
+                    ? String(formik.errors.agentCommission)
+                    : undefined
+                }
+              />
             </Box>
 
             <TextField

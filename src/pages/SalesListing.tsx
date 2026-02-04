@@ -518,7 +518,7 @@ const SalesListing: React.FC = () => {
 
     return (
       <TableRow key={`${rowKey}-expanded`}>
-        <TableCell colSpan={9} sx={{ py: 0, border: 0 }}>
+        <TableCell colSpan={10} sx={{ py: 0, border: 0 }}>
           <Box sx={{ py: 2 }}>
             {products.length === 0 ? (
               <Typography variant="body2" color="text.secondary" sx={{ py: 1 }}>
@@ -1005,6 +1005,9 @@ const SalesListing: React.FC = () => {
                   </TableSortLabel>
                 </TableCell>
 
+                {/* Agent Commission column (percentage) */}
+                <TableCell>Agent Commission</TableCell>
+
                 {/* TIN No. and Business Address columns removed */}
                 <TableCell align="right">Actions</TableCell>
               </TableRow>
@@ -1012,7 +1015,7 @@ const SalesListing: React.FC = () => {
             <TableBody>
               {sales.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={9} align="center">
+                  <TableCell colSpan={10} align="center">
                     No records found
                   </TableCell>
                 </TableRow>
@@ -1086,6 +1089,13 @@ const SalesListing: React.FC = () => {
 
                     {/* Net Total */}
                     <TableCell>{formatPeso(row.netTotal)}</TableCell>
+
+                    {/* Agent Commission */}
+                    <TableCell>{
+                      row.agentCommission !== null && typeof row.agentCommission !== 'undefined'
+                        ? `${Number(row.agentCommission).toLocaleString(undefined, { maximumFractionDigits: 2 })} Percent`
+                        : "-"
+                    }</TableCell>
 
                     {/* Sales Channel, Receipt No., TIN No., Business Address columns removed */}
 
