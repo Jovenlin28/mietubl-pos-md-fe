@@ -683,7 +683,6 @@ const ExpenseAddModal: React.FC<ExpenseAddModalProps> = ({
               {fieldError("attachment") as any}
             </Typography>
           )}
-
           <DialogActions sx={{ px: 0, pb: 0, pt: 2 }}>
             <Box
               sx={{

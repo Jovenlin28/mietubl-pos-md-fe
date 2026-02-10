@@ -45,6 +45,8 @@ const SALES_SCHEMA = Yup.object().shape({
     .nullable()
     .min(0, "Agent commission must be >= 0")
     .max(100, "Agent commission must be <= 100"),
+  // optional agent selection
+  agentId: Yup.mixed().nullable(),
   products: Yup.array()
     .of(
       Yup.object().shape({
@@ -97,9 +99,28 @@ const AddSales: React.FC = () => {
 
   const user = useContext(UserContext);
 
+  // load agents once
+  useEffect(() => {
+    const fetchAgents = async () => {
+      setAgentLoading(true);
+      try {
+        const res = await axiosInstance.get('/agents', { params: { perPage: 1000, currentPage: 1 } });
+        setAgentOptions(res.data.items || []);
+      } catch (e) {
+        setAgentOptions([]);
+      }
+      setAgentLoading(false);
+    };
+    fetchAgents();
+  }, []);
+
   const [productDiscounts, setProductDiscounts] = useState<
     Record<number, number>
   >({});
+
+  // Agents list for dropdown
+  const [agentOptions, setAgentOptions] = useState<any[]>([]);
+  const [agentLoading, setAgentLoading] = useState(false);
   const navigate = useNavigate();
 
   type FormikProduct = {
@@ -124,6 +145,7 @@ const AddSales: React.FC = () => {
     company: string;
     notes: string;
     agentCommission: number | string;
+    agentId: string;
     products: FormikProduct[];
   }
 
@@ -140,6 +162,7 @@ const AddSales: React.FC = () => {
       company: "",
       notes: "", // new optional field
       agentCommission: "",
+      agentId: "",
       products: [],
     },
     validationSchema: SALES_SCHEMA,
@@ -159,6 +182,7 @@ const AddSales: React.FC = () => {
           address: values.address,
           notes: values.notes,
           agentCommission: String(values.agentCommission).trim() === "" ? null : Number(values.agentCommission),
+          agentId: String(values.agentId).trim() === "" ? null : values.agentId,
           products: values.products,
           // include freebies same shape as CreateProduct
           freebies: selectedFreebies.map((f) => ({
@@ -339,6 +363,7 @@ const AddSales: React.FC = () => {
           address: sale.address ?? "",
           notes: sale.notes ?? "",
           agentCommission: sale.agentCommission ?? "",
+          agentId: sale.agent?.id ?? sale.agent_id ?? "",
           products: productsWithStock,
         });
 
@@ -904,14 +929,14 @@ const AddSales: React.FC = () => {
               /> */}
             </Box>
 
-            <Box sx={{ width: "100%", mb: 1 }}>
+            <Box sx={{ width: "100%", mb: 1, display: 'flex', gap: 2, flexDirection: { xs: 'column', sm: 'row' } }}>
               <TextField
                 label="Agent Commission (percentage)"
                 name="agentCommission"
                 type="number"
                 value={formik.values.agentCommission}
                 onChange={formik.handleChange}
-                sx={{ width: "100%" }}
+                sx={{ flex: 1 }}
                 inputProps={{ min: 0, max: 100, step: "0.01" }}
                 error={
                   !!formik.errors.agentCommission &&
@@ -924,6 +949,24 @@ const AddSales: React.FC = () => {
                     : undefined
                 }
               />
+
+              <TextField
+                select
+                label="Agent"
+                name="agentId"
+                value={formik.values.agentId}
+                onChange={formik.handleChange}
+                sx={{ width: { xs: '100%', sm: 320 } }}
+                disabled={agentLoading}
+                helperText={agentLoading ? 'Loading agents...' : ''}
+              >
+                <MenuItem value="">None</MenuItem>
+                {agentOptions.map((a: any) => (
+                  <MenuItem key={a.id} value={String(a.id)}>
+                    {a.fullName}
+                  </MenuItem>
+                ))}
+              </TextField>
             </Box>
 
             <TextField

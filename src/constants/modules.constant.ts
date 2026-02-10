@@ -12,6 +12,7 @@ export const MODULES = [
   { name: "Sales Report", perms: ["Read"] },
   { name: "Expense Report", perms: ["Read"] },
   { name: "Customers", perms: ["Read", "Create", "Update", "Delete"] },
+  { name: "Agents", perms: ["Read", "Create", "Update", "Delete"] },
   { name: "Users", perms: ["Read", "Create", "Update", "Delete"] },
   { name: "Roles & Permissions", perms: ["Read", "Create", "Update", "Delete"] },
   { name: "Discounts", perms: ["Read", "Create", "Update", "Delete"] },

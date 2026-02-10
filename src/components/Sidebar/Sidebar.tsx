@@ -114,6 +114,7 @@ const sections = [
     label: "Users Management",
     items: [
       { label: "Customers", icon: <ContactsIcon />, path: "/customers" },
+      { label: "Agents", icon: <ContactsIcon />, path: "/agents" },
       { label: "Users", icon: <People />, path: "/users" },
       { label: "Roles & Permissions", icon: <SecurityIcon />, path: "/roles" },
     ],

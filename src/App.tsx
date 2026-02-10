@@ -28,6 +28,7 @@ import ProductDetail from "./pages/ProductDetail";
 import DashboardLayout from "./layouts/DashboardLayout";
 import Stores from "./pages/Stores";
 import Users from "./pages/Users";
+import Agents from "./pages/Agents";
 import RolesAndPermissions from "./pages/RolesAndPermissions";
 import Permissions from "./pages/Permissions";
 import PaymentsMonitoring from "./pages/PaymentsMonitoring";
@@ -113,6 +114,7 @@ const App: React.FC = () => {
           <Route path="discounts" element={<Discount />} />
           <Route path="stores" element={<Stores />} />
           <Route path="users" element={<Users />} />
+          <Route path="agents" element={<Agents />} />
           <Route path="roles" element={<RolesAndPermissions />} />
           <Route path="roles/:id/permissions" element={<Permissions />} />
           <Route path="/payments-monitoring" element={<PaymentsMonitoring />} />
