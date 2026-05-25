@@ -7,7 +7,6 @@ import {
   CircularProgress,
   Backdrop,
   LinearProgress,
-  Grid,
   TextField,
   Button,
   Box as MBox,
@@ -43,6 +42,7 @@ import AssignmentIcon from "@mui/icons-material/Assignment";
 import AccountBalanceWalletIcon from "@mui/icons-material/AccountBalanceWallet";
 import ReportProblemIcon from "@mui/icons-material/ReportProblem";
 import HourglassEmptyIcon from "@mui/icons-material/HourglassEmpty";
+import LocalOfferIcon from "@mui/icons-material/LocalOffer";
 
 ChartJS.register(
   CategoryScale,
@@ -77,8 +77,10 @@ const Dashboard: React.FC = () => {
     grossProfit: 0,
     grossProfitMargin: 0,
     sales: 0,
+    totalCostingPrice: 0,
     expenses: 0,
     totalPurchaseOrders: 0,
+    totalAgentCommissions: 0,
     totalPaidOrders: 0,
     totalPaidOrdersPartially: 0,
     totalUnpaidOrders: 0,
@@ -157,6 +159,7 @@ const Dashboard: React.FC = () => {
 
       // top-level summary
       const totalSold = Number(data.totalSoldPrice || 0);
+      const totalCostingPrice = Number(data.totalCostingPrice || 0);
       const grossProfit = Number(data.allTimeGrossProfit || 0);
       const allExpenses = Number(data.allTimeExpenses || 0);
 
@@ -166,8 +169,10 @@ const Dashboard: React.FC = () => {
           ? Math.round((grossProfit / totalSold) * 100)
           : 0,
         sales: totalSold,
+        totalCostingPrice,
         expenses: allExpenses,
         totalPurchaseOrders: Number(data.totalPurchaseOrders || 0),
+        totalAgentCommissions: Number(data.totalAgentCommissions || 0),
         totalPaidOrders: Number(data.totalPaidOrders || 0),
         totalPaidOrdersPartially: Number(data.totalPaidOrdersPartially || 0),
         totalUnpaidOrders: Number(data.totalUnpaidOrders || 0),
@@ -411,6 +416,73 @@ const Dashboard: React.FC = () => {
     </Paper>
   );
 
+  const summaryWidgets = [
+    {
+      label: "All Time Gross Profit",
+      accent: "#27ae60",
+      icon: <TrendingUpIcon />,
+      value: Number(allTime.grossProfit || 0).toLocaleString(),
+    },
+    {
+      label: "Total Sold Price",
+      accent: "#2980b9",
+      icon: <ShoppingCartIcon />,
+      value: Number(allTime.sales || 0).toLocaleString(),
+    },
+    {
+      label: "Total Costing Price",
+      accent: "#f39c12",
+      icon: <LocalOfferIcon />,
+      value: Number(allTime.totalCostingPrice || 0).toLocaleString(),
+    },
+    {
+      label: "Total Received Payments",
+      accent: "#27ae60",
+      icon: <AccountBalanceWalletIcon />,
+      value: Number((allTime as any).totalPaymentsAccomplies || 0).toLocaleString(),
+    },
+    {
+      label: "Total Unreceived Payments",
+      accent: "#c0392b",
+      icon: <ReportProblemIcon />,
+      value: Math.max(
+        0,
+        Number(allTime.sales || 0) -
+          Number((allTime as any).totalPaymentsAccomplies || 0)
+      ),
+    },
+    {
+      label: "Total Purchase Orders",
+      accent: "#6c7a89",
+      icon: <AssignmentIcon />,
+      value: Number((allTime as any).totalPurchaseOrders || 0).toLocaleString(),
+    },
+    {
+      label: "Total Paid Orders",
+      accent: "#27ae60",
+      icon: <AccountBalanceWalletIcon />,
+      value: Number((allTime as any).totalPaidOrders || 0).toLocaleString(),
+    },
+    {
+      label: "Total Unpaid Orders",
+      accent: "#c0392b",
+      icon: <ReportProblemIcon />,
+      value: Number((allTime as any).totalUnpaidOrders || 0).toLocaleString(),
+    },
+    {
+      label: "Total Paid Orders Partially",
+      accent: "#8e44ad",
+      icon: <HourglassEmptyIcon />,
+      value: Number((allTime as any).totalPaidOrdersPartially || 0).toLocaleString(),
+    },
+    {
+      label: "Total Agent Commissions",
+      accent: "#f39c12",
+      icon: <MonetizationOnIcon />,
+      value: Number((allTime as any).totalAgentCommissions || 0).toLocaleString(),
+    },
+  ];
+
   return (
     <Box
       sx={{
@@ -555,92 +627,25 @@ const Dashboard: React.FC = () => {
         {/* date filters (right side of title) */}
       </Box>
 
-      {/* Top widgets */}
-      <Grid container spacing={2} mb={2}>
-        <Grid item xs={12} sm={6} md={3}>
-          {widgetBox(
-            "#27ae60",
-            <TrendingUpIcon />,
-            "All Time Gross Profit",
-            Number(allTime.grossProfit || 0).toLocaleString()
-          )}
-        </Grid>
-
-        <Grid item xs={12} sm={6} md={3}>
-          {widgetBox(
-            "#2980b9",
-            <ShoppingCartIcon />,
-            "Total Sold Price",
-            Number(allTime.sales || 0).toLocaleString()
-          )}
-        </Grid>
-
-        <Grid item xs={12} sm={6} md={3}>
-          {widgetBox(
-            "#27ae60",
-            <AccountBalanceWalletIcon />,
-            "Total Received Payments",
-            Number(
-              (allTime as any).totalPaymentsAccomplies || 0
-            ).toLocaleString()
-          )}
-        </Grid>
-
-        <Grid item xs={12} sm={6} md={3}>
-          {widgetBox(
-            "#c0392b",
-            <ReportProblemIcon />,
-            "Total Unreceived Payments",
-            // compute outstanding = total sold price - total payments received; floor at 0
-            Math.max(
-              0,
-              Number(allTime.sales || 0) -
-                Number((allTime as any).totalPaymentsAccomplies || 0)
-            )
-          )}
-        </Grid>
-      </Grid>
-
-      {/* Second row widgets */}
-      <Grid container spacing={2} mb={4}>
-        <Grid item xs={12} sm={6} md={3}>
-          {widgetBox(
-            "#6c7a89",
-            <AssignmentIcon />,
-            "Total Purchase Orders",
-            Number((allTime as any).totalPurchaseOrders || 0).toLocaleString()
-          )}
-        </Grid>
-
-        <Grid item xs={12} sm={6} md={3}>
-          {widgetBox(
-            "#27ae60",
-            <AccountBalanceWalletIcon />,
-            "Total Paid Orders",
-            Number((allTime as any).totalPaidOrders || 0).toLocaleString()
-          )}
-        </Grid>
-
-        <Grid item xs={12} sm={6} md={3}>
-          {widgetBox(
-            "#c0392b",
-            <ReportProblemIcon />,
-            "Total Unpaid Orders",
-            Number((allTime as any).totalUnpaidOrders || 0).toLocaleString()
-          )}
-        </Grid>
-
-        <Grid item xs={12} sm={6} md={3}>
-          {widgetBox(
-            "#8e44ad",
-            <HourglassEmptyIcon />,
-            "Total Paid Orders Partially",
-            Number(
-              (allTime as any).totalPaidOrdersPartially || 0
-            ).toLocaleString()
-          )}
-        </Grid>
-      </Grid>
+      <Box
+        sx={{
+          display: "grid",
+          gridTemplateColumns: {
+            xs: "1fr",
+            sm: "repeat(2, minmax(0, 1fr))",
+            lg: "repeat(3, minmax(0, 1fr))",
+          },
+          gap: 2,
+          mb: 2,
+          alignItems: "stretch",
+        }}
+      >
+        {summaryWidgets.map((widget) => (
+          <Box key={widget.label} sx={{ minWidth: 0 }}>
+            {widgetBox(widget.accent, widget.icon, widget.label, widget.value)}
+          </Box>
+        ))}
+      </Box>
 
       {/* Second row widgets */}
       <Stack
