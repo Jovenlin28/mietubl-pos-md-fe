@@ -513,15 +513,25 @@ const PaymentsMonitoring: React.FC = () => {
         <TableCell>
           {row.sale?.paymentOption && row.sale?.paymentOption ? (
             <Chip
-              label={row.sale.paymentOption === 'Installment Payment' ? 'Installment' : (row.sale.paymentOption === 'Cash Payment' ? 'Cash' : row.sale.paymentOption)}
+              label={
+                row.sale.paymentOption === "Installment Payment"
+                  ? "Installment"
+                  : row.sale.paymentOption === "Cash Payment"
+                  ? "Cash"
+                  : row.sale.paymentOption === "LBC"
+                  ? "LBC"
+                  : row.sale.paymentOption
+              }
               size="small"
               sx={{
                 bgcolor:
                   row.sale.paymentOption === "Cash Payment"
                     ? "#27ae60"
-                    : (row.sale.paymentOption === "Installment Payment"
-                      ? "#FF0000"
-                      : "#808080"),
+                    : row.sale.paymentOption === "Installment Payment"
+                    ? "#FF0000"
+                    : row.sale.paymentOption === "LBC"
+                    ? "#f1c40f"
+                    : "#808080",
                 color: "#fff",
                 fontWeight: 700,
               }}

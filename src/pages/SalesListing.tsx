@@ -1075,15 +1075,25 @@ const SalesListing: React.FC = () => {
                     <TableCell>
                       {row.paymentOption && row.paymentOption ? (
                         <Chip
-                          label={row.paymentOption === 'Installment Payment' ? 'Installment' : (row.paymentOption === 'Cash Payment' ? 'Cash' : row.paymentOption)}
+                          label={
+                            row.paymentOption === "Installment Payment"
+                              ? "Installment"
+                              : row.paymentOption === "Cash Payment"
+                              ? "Cash"
+                              : row.paymentOption === "LBC"
+                              ? "LBC"
+                              : row.paymentOption
+                          }
                           size="small"
                           sx={{
                             bgcolor:
                               row.paymentOption === "Cash Payment"
                                 ? "#27ae60"
-                                : (row.paymentOption === "Installment Payment"
-                                  ? "#FF0000"
-                                  : "#808080"),
+                                : row.paymentOption === "Installment Payment"
+                                ? "#FF0000"
+                                : row.paymentOption === "LBC"
+                                ? "#f1c40f"
+                                : "#808080",
                             color: "#fff",
                             fontWeight: 700,
                           }}
