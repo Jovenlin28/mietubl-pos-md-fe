@@ -358,7 +358,8 @@ const PaymentsMonitoring: React.FC = () => {
     { id: "total", label: "Total", sortable: true },
     { id: "amount", label: "Amount Paid", sortable: true },
     { id: "balance", label: "Balance", sortable: true },
-    { id: "paymentChannel", label: "Channel", sortable: true },
+    { id: "paymentChannel", label: "Payment Channel", sortable: true },
+    { id: "paymentOption", label: "Payment Option", sortable: true },
     { id: "paymentStatus", label: "Payment Status", sortable: true },
     { id: "deliveryStatus", label: "Delivery Status", sortable: true },
     { id: "createdOn", label: "Created On", sortable: true },
@@ -505,6 +506,28 @@ const PaymentsMonitoring: React.FC = () => {
             />
           ) : (
             row.paymentChannel || "-"
+          )}
+        </TableCell>
+
+        {/* Payment Option */}
+        <TableCell>
+          {row.sale?.paymentOption && row.sale?.paymentOption ? (
+            <Chip
+              label={row.sale.paymentOption === 'Installment Payment' ? 'Installment' : (row.sale.paymentOption === 'Cash Payment' ? 'Cash' : row.sale.paymentOption)}
+              size="small"
+              sx={{
+                bgcolor:
+                  row.sale.paymentOption === "Cash Payment"
+                    ? "#27ae60"
+                    : (row.sale.paymentOption === "Installment Payment"
+                      ? "#FF0000"
+                      : "#808080"),
+                color: "#fff",
+                fontWeight: 700,
+              }}
+            />
+          ) : (
+            "-"
           )}
         </TableCell>
 

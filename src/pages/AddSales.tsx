@@ -12,6 +12,8 @@ import {
   Autocomplete,
   Chip,
   Divider,
+  Switch,
+  FormControlLabel,
 } from "@mui/material";
 import { useFormik } from "formik";
 import * as Yup from "yup";
@@ -35,7 +37,7 @@ const SALES_SCHEMA = Yup.object().shape({
   category: Yup.string().required("Category is required"),
   // customer is now required
   customerId: Yup.mixed().required("Customer is required"),
-  tin: Yup.string(),
+  paymentOption: Yup.string().required("Payment Option is required"),
   address: Yup.string(),
   notes: Yup.string(), // optional
   company: Yup.string(),
@@ -73,6 +75,7 @@ const AddSales: React.FC = () => {
   const [productCodesLoading, setProductCodesLoading] = useState(false);
   const [selectedCodes, setSelectedCodes] = useState<ProductCode[]>([]);
   const [loading, setLoading] = useState(false);
+  const [transferMode, setTransferMode] = useState(false);
   // freebies states (transferred from CreateProduct)
   const [freebiesCategory, setFreebiesCategory] = useState<string>("");
   const [freebieProductCodes, setFreebieProductCodes] = useState<any[]>([]);
@@ -131,6 +134,11 @@ const AddSales: React.FC = () => {
     qty: number | "";
     stock: number;
     discount?: number;
+    /**
+     * Stores the original per-unit discount (from customer mapping or product default).
+     * This is used to restore the discount when transfer mode is disabled.
+     */
+    baseDiscount?: number;
   };
 
   interface FormikValues {
@@ -140,7 +148,7 @@ const AddSales: React.FC = () => {
     category: string;
     customerId: string;
     storeName: string;
-    tin: string;
+    paymentOption: string;
     address: string;
     company: string;
     notes: string;
@@ -157,7 +165,7 @@ const AddSales: React.FC = () => {
       category: "",
       customerId: "",
       storeName: "",
-      tin: "",
+      paymentOption: "",
       address: "",
       company: "",
       notes: "", // new optional field
@@ -177,12 +185,13 @@ const AddSales: React.FC = () => {
           category: values.category,
           customer_id: values.customerId || null,
           storeName: values.storeName ?? "",
-          tin: values.tin,
+          paymentOption: values.paymentOption,
           company: values.company ?? "",
           address: values.address,
           notes: values.notes,
           agentCommission: String(values.agentCommission).trim() === "" ? null : Number(values.agentCommission),
           agentId: String(values.agentId).trim() === "" ? null : values.agentId,
+          forTransfer: transferMode,
           products: values.products,
           // include freebies same shape as CreateProduct
           freebies: selectedFreebies.map((f) => ({
@@ -319,6 +328,9 @@ const AddSales: React.FC = () => {
       try {
         const res = await axiosInstance.get(`/sales/${id}`);
         const sale = res.data;
+        // Ensure transfer mode reflects what is stored in the existing record
+        setTransferMode(Boolean(sale.forTransfer));
+
         // Map products from API to canonical shape (price, qty, stock, discount per-unit)
         const mappedProducts = Array.isArray(sale.products)
           ? sale.products.map((p: any) => {
@@ -336,6 +348,7 @@ const AddSales: React.FC = () => {
                 qty,
                 stock: 0, // Will be updated with real stock values below
                 discount: unitDiscount,
+                baseDiscount: unitDiscount,
                 tax: 0,
               };
             })
@@ -358,7 +371,7 @@ const AddSales: React.FC = () => {
           category: categoryValue,
           customerId: sale.customer?.id ?? sale.customer_id ?? "",
           storeName: sale.customer?.storeName ?? sale.storeName ?? "",
-          tin: sale.tin ?? "",
+          paymentOption: sale.paymentOption ?? "",
           company: sale.company ?? "",
           address: sale.address ?? "",
           notes: sale.notes ?? "",
@@ -436,7 +449,6 @@ const AddSales: React.FC = () => {
     setSelectedCodes(uniq);
   }, [formik.values.products]);
 
-  // Update quantity
   const handleQuantityChange = (idx: number, value: number | string) => {
     const products = [...(formik.values.products as any[])];
     // Use stock field directly (numeric) - no fallback to avoid confusion
@@ -547,17 +559,21 @@ const AddSales: React.FC = () => {
   }, [formik.values.customerId]);
 
   // Apply productDiscounts to current products whenever mapping changes
+  // Keep a copy of the original per-unit discount so we can restore it when transfer mode is disabled.
   useEffect(() => {
     if (!(formik.values.products as any[]).length) return;
     const items = (formik.values.products as any[]).map((item: any) => {
-      const perUnit =
+      const baseDiscount =
         Number(
-          productDiscounts[item.id] ?? item.discount ?? item.discountValue ?? 0
+          productDiscounts[item.id] ?? item.baseDiscount ?? item.discount ?? item.discountValue ?? 0
         ) || 0;
       const qty = Number(item.qty ?? 1) || 1;
       return {
         ...item,
-        discount: perUnit,
+        baseDiscount,
+        discount: transferMode
+          ? Number(item.price ?? 0)
+          : baseDiscount,
         price: Number(item.price ?? 0),
         tax: 0,
         qty,
@@ -565,7 +581,30 @@ const AddSales: React.FC = () => {
     });
     formik.setFieldValue("products", items);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [productDiscounts]);
+  }, [productDiscounts, transferMode]);
+
+  // When transfer mode is toggled, update product discounts accordingly.
+  // - When ON: discount = unit price (100% off)
+  // - When OFF: restore per-unit discount from baseDiscount (customer/product mapping or default)
+  useEffect(() => {
+    if (!(formik.values.products as any[]).length) return;
+
+    const items = (formik.values.products as any[]).map((item: any) => {
+      const price = Number(item.price ?? 0);
+      const baseDiscount =
+        item.baseDiscount !== undefined
+          ? Number(item.baseDiscount) || 0
+          : Number(item.discount ?? item.discountValue ?? 0) || 0;
+      return {
+        ...item,
+        // Keep the original per-unit discount even when transfer mode is toggled on
+        baseDiscount,
+        discount: transferMode ? price : baseDiscount,
+      };
+    });
+    formik.setFieldValue("products", items);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [transferMode]);
 
   // Helper function to fetch products for a category
   const fetchCategoryProducts = async (
@@ -851,16 +890,14 @@ const AddSales: React.FC = () => {
                 onChange={(_, value) => {
                   if (value) {
                     formik.setFieldValue("customerId", Number(value.id));
-                    // populate storeName, address if present on the selected customer
                     formik.setFieldValue("storeName", value.storeName ?? "");
                     formik.setFieldValue("address", value.address ?? "");
-                    // TIN moved into Terms of Payment block; do not set tin here
                   } else {
                     // cleared selection -> clear related fields
                     formik.setFieldValue("customerId", "");
                     formik.setFieldValue("storeName", "");
                     formik.setFieldValue("address", "");
-                    formik.setFieldValue("tin", "");
+                    formik.setFieldValue("paymentOption", "");
                   }
                 }}
                 isOptionEqualToValue={(option, value) =>
@@ -899,13 +936,31 @@ const AddSales: React.FC = () => {
                 disableClearable={false}
                 clearOnEscape
               />
-              <TextField
+              {/* <TextField
                 sx={{ flex: 1 }}
                 label="TIN"
                 name="tin"
                 value={formik.values.tin}
                 onChange={formik.handleChange}
-              />
+              /> */}
+              <TextField
+                label="Payment Option"
+                name="paymentOption"
+                select
+                value={formik.values.paymentOption}
+                onChange={formik.handleChange}
+                sx={{ flex: 1 }}
+                error={
+                  !!formik.errors.paymentOption && formik.touched.paymentOption
+                }
+                helperText={
+                  formik.touched.paymentOption && formik.errors.paymentOption
+                }
+              >
+                <MenuItem value="Cash Payment">Cash Payment</MenuItem>
+                <MenuItem value="Installment Payment">Installment Payment</MenuItem>
+                <MenuItem value="TBD">TBD</MenuItem>
+              </TextField>
               <TextField
                 sx={{ flex: 1 }}
                 label="Company"
@@ -956,7 +1011,7 @@ const AddSales: React.FC = () => {
                 name="agentId"
                 value={formik.values.agentId}
                 onChange={formik.handleChange}
-                sx={{ width: { xs: '100%', sm: 320 } }}
+                sx={{ flex: 1 }}
                 disabled={agentLoading}
                 helperText={agentLoading ? 'Loading agents...' : ''}
               >
@@ -1100,7 +1155,8 @@ const AddSales: React.FC = () => {
                           (Number(found.qty ?? found.stock ?? 0) || 0) > 0
                             ? 1
                             : 0,
-                        discount: perUnitDiscount,
+                        baseDiscount: perUnitDiscount,
+                        discount: transferMode ? unitPrice : perUnitDiscount,
                         tax: 0,
                       });
                     }
@@ -1147,6 +1203,17 @@ const AddSales: React.FC = () => {
                 />
               )}
               sx={{ width: { xs: "100%", sm: 360 } }}
+            />
+            <FormControlLabel
+              control={
+                <Switch
+                  checked={transferMode}
+                  onChange={(_, checked) => setTransferMode(checked)}
+                  color="primary"
+                />
+              }
+              label="For transfer"
+              sx={{ alignSelf: "center", ml: { xs: 0, sm: 1 } }}
             />
           </Box>
 
@@ -1435,7 +1502,12 @@ const AddSales: React.FC = () => {
                             </td>
                             <td style={{ padding: 8 }}>
                               <Typography fontWeight={400} color="#555">
-                                {qtyNum > 0
+                                {transferMode
+                                  ? "₱" +
+                                    Number(p.price ?? 0).toLocaleString(undefined, {
+                                      minimumFractionDigits: 2,
+                                    })
+                                  : qtyNum > 0
                                   ? "₱" +
                                     (
                                       Number(p.discount ?? 0) * qtyNum

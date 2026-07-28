@@ -21,6 +21,7 @@ import ExpiredProducts from "./pages/ExpiredProducts";
 import LowStocks from "./pages/LowStocks";
 import SalesReport from "./pages/SalesReport";
 import ExpenseReport from "./pages/ExpenseReport";
+import AgentsReport from "./pages/AgentsReport";
 import AddSales from "./pages/AddSales";
 import Customers from "./pages/Customers";
 import Discount from "./pages/Discount";
@@ -108,6 +109,7 @@ const App: React.FC = () => {
           <Route path="low-stocks" element={<LowStocks />} />
           <Route path="sales-report" element={<SalesReport />} />
           <Route path="expense-report" element={<ExpenseReport />} />
+          <Route path="agents-report" element={<AgentsReport />} />
           <Route path="add-sales" element={<AddSales />} />
           <Route path="sales/:id/edit" element={<AddSales />} />
           <Route path="customers" element={<Customers />} />

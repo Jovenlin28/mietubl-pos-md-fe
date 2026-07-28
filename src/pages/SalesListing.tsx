@@ -984,6 +984,7 @@ const SalesListing: React.FC = () => {
 
                 {/* Customer */}
                 <TableCell>Customer</TableCell>
+                <TableCell>Payment Option</TableCell>
                 <TableCell
                   sx={{ width: { xs: "20%", md: "15%" }, minWidth: 150 }}
                 >
@@ -1068,6 +1069,28 @@ const SalesListing: React.FC = () => {
                       >
                         {`${row.customer?.fullName} - ${row.customer?.storeName}`}
                       </Button>
+                    </TableCell>
+                      
+                    {/* Payment Option */}
+                    <TableCell>
+                      {row.paymentOption && row.paymentOption ? (
+                        <Chip
+                          label={row.paymentOption === 'Installment Payment' ? 'Installment' : (row.paymentOption === 'Cash Payment' ? 'Cash' : row.paymentOption)}
+                          size="small"
+                          sx={{
+                            bgcolor:
+                              row.paymentOption === "Cash Payment"
+                                ? "#27ae60"
+                                : (row.paymentOption === "Installment Payment"
+                                  ? "#FF0000"
+                                  : "#808080"),
+                            color: "#fff",
+                            fontWeight: 700,
+                          }}
+                        />
+                      ) : (
+                        "-"
+                      )}
                     </TableCell>
 
                     {/* Products */}

@@ -108,6 +108,11 @@ const sections = [
         icon: <PieChartIcon />,
         path: "/expense-report",
       },
+      {
+        label: "Agents Report",
+        icon: <AssessmentIcon />,
+        path: "/agents-report",
+      },
     ],
   },
   {
