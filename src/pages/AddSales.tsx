@@ -959,6 +959,7 @@ const AddSales: React.FC = () => {
               >
                 <MenuItem value="Cash Payment">Cash Payment</MenuItem>
                 <MenuItem value="Installment Payment">Installment Payment</MenuItem>
+                <MenuItem value="LBC">LBC</MenuItem>
                 <MenuItem value="TBD">TBD</MenuItem>
               </TextField>
               <TextField
