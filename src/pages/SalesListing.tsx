@@ -1082,6 +1082,8 @@ const SalesListing: React.FC = () => {
                               ? "Cash"
                               : row.paymentOption === "LBC"
                               ? "LBC"
+                              : row.paymentOption === "PDC"
+                              ? "PDC"
                               : row.paymentOption
                           }
                           size="small"
@@ -1093,6 +1095,8 @@ const SalesListing: React.FC = () => {
                                 ? "#FF0000"
                                 : row.paymentOption === "LBC"
                                 ? "#f1c40f"
+                                : row.paymentOption === "PDC"
+                                ? "#003151"
                                 : "#808080",
                             color: "#fff",
                             fontWeight: 700,
