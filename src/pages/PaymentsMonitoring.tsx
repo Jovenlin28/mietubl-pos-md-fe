@@ -514,26 +514,26 @@ const PaymentsMonitoring: React.FC = () => {
           {row.sale?.paymentOption && row.sale?.paymentOption ? (
             <Chip
               label={
-                row.paymentOption === "Installment Payment"
+                row.sale?.paymentOption === "Installment Payment"
                   ? "Installment"
-                  : row.paymentOption === "Cash Payment"
+                  : row.sale?.paymentOption === "Cash Payment"
                   ? "Cash"
-                  : row.paymentOption === "LBC"
+                  : row.sale?.paymentOption === "LBC"
                   ? "LBC"
-                  : row.paymentOption === "PDC"
+                  : row.sale?.paymentOption === "PDC"
                   ? "PDC"
-                  : row.paymentOption
+                  : row.sale?.paymentOption
               }
               size="small"
               sx={{
                 bgcolor:
-                  row.paymentOption === "Cash Payment"
+                  row.sale?.paymentOption === "Cash Payment"
                     ? "#27ae60"
-                    : row.paymentOption === "Installment Payment"
+                    : row.sale?.paymentOption === "Installment Payment"
                     ? "#FF0000"
-                    : row.paymentOption === "LBC"
+                    : row.sale?.paymentOption === "LBC"
                     ? "#f1c40f"
-                    : row.paymentOption === "PDC"
+                    : row.sale?.paymentOption === "PDC"
                     ? "#003151"
                     : "#808080",
                 color: "#fff",
