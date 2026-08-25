@@ -12,11 +12,51 @@ import {
   useMediaQuery,
   Menu,
   MenuItem,
+  Popover,
+  Typography,
+  List,
+  ListItem,
+  ListItemText,
+  Divider,
 } from "@mui/material";
 import NotificationsNoneIcon from "@mui/icons-material/NotificationsNone";
 import SettingsOutlinedIcon from "@mui/icons-material/SettingsOutlined";
 import SearchIcon from "@mui/icons-material/Search";
 import axiosInstance from "../configs/axiosConfig";
+import dayjs from "dayjs";
+
+interface PaymentReminder {
+  id: number;
+  dueDate: string | null;
+  customer_fullName?: string;
+  customer?: { fullName?: string };
+}
+
+interface NotificationItem {
+  title: string;
+  description: string;
+}
+
+const buildNotifications = (payments: PaymentReminder[]): NotificationItem[] => {
+  const now = dayjs();
+  return payments.map((payment) => {
+    const fullName =
+      payment.customer?.fullName || payment.customer_fullName || "Customer";
+    let daysLabel = "an upcoming due date";
+    if (payment.dueDate) {
+      const diffDays = dayjs(payment.dueDate).diff(now, "day", true);
+      const roundedDays = Math.ceil(diffDays);
+      daysLabel =
+        roundedDays === 1
+          ? "an upcoming due date Tomorrow"
+          : `an upcoming due date in ${roundedDays} days`;
+    }
+    return {
+      title: "Payment reminder",
+      description: `${fullName} has ${daysLabel}`,
+    };
+  });
+};
 
 // Permissions context
 export const PermissionsContext = createContext<{
@@ -49,10 +89,33 @@ interface TopHeaderProps {
 const TopHeader: React.FC<TopHeaderProps> = ({ isMobile }) => {
   const navigate = useNavigate();
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const [notificationAnchorEl, setNotificationAnchorEl] =
+    useState<null | HTMLElement>(null);
+  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
 
   // show avatar from token (or initials fallback)
   const [avatarSrc, setAvatarSrc] = useState<string | undefined>(undefined);
   const [initials, setInitials] = useState<string>("U");
+
+  useEffect(() => {
+    const fetchReminders = async () => {
+      try {
+        const res = await axiosInstance.get("/payments/reminder");
+        setNotifications(buildNotifications(res.data || []));
+      } catch {
+        setNotifications([]);
+      }
+    };
+    fetchReminders();
+  }, []);
+
+  const handleNotificationClick = (event: React.MouseEvent<HTMLElement>) => {
+    setNotificationAnchorEl(event.currentTarget);
+  };
+
+  const handleNotificationClose = () => {
+    setNotificationAnchorEl(null);
+  };
 
   useEffect(() => {
     try {
@@ -148,14 +211,52 @@ const TopHeader: React.FC<TopHeaderProps> = ({ isMobile }) => {
         </Paper>
       )}
 
-      <IconButton>
+      <IconButton onClick={handleNotificationClick}>
         <Badge
-          color="default"
-          sx={{ "& .MuiBadge-dot": { bgcolor: "error.main" } }}
+          badgeContent={notifications.length}
+          color="error"
+          overlap="circular"
         >
           <NotificationsNoneIcon />
         </Badge>
       </IconButton>
+      <Popover
+        open={Boolean(notificationAnchorEl)}
+        anchorEl={notificationAnchorEl}
+        onClose={handleNotificationClose}
+        anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+        transformOrigin={{ vertical: "top", horizontal: "right" }}
+        PaperProps={{ sx: { width: 340, borderRadius: 2, overflow: "hidden" } }}
+      >
+        <Box sx={{ bgcolor: "#f39c12", color: "#fff", px: 2.5, py: 2 }}>
+          <Typography variant="subtitle1" fontWeight={700}>
+            Notifications
+          </Typography>
+        </Box>
+        <List sx={{ py: 0, maxHeight: 360, overflowY: "auto" }}>
+          {notifications.length === 0 ? (
+            <ListItem>
+              <ListItemText primary="No notifications" />
+            </ListItem>
+          ) : (
+            notifications.map((notification, index) => (
+              <React.Fragment key={index}>
+                <ListItem sx={{ py: 1.5, px: 2.5 }}>
+                  <ListItemText
+                    primary={
+                      <Typography variant="body2" fontWeight={700}>
+                        {notification.title}
+                      </Typography>
+                    }
+                    secondary={notification.description}
+                  />
+                </ListItem>
+                {index < notifications.length - 1 && <Divider component="li" />}
+              </React.Fragment>
+            ))
+          )}
+        </List>
+      </Popover>
       <IconButton>
         <SettingsOutlinedIcon />
       </IconButton>

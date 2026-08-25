@@ -241,7 +241,7 @@ const AddSales: React.FC = () => {
       setCustomerLoading(true);
       try {
         const res = await axiosInstance.get("/customers", {
-          params: { perPage: 1000, currentPage: 1 },
+          params: { perPage: 1000, currentPage: 1, sortBy: 'mostTransactions' },
         });
         setCustomerOptions(res.data.items || []);
       } catch {
