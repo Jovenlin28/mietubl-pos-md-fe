@@ -30,6 +30,7 @@ interface PaymentReminder {
   dueDate: string | null;
   customer_fullName?: string;
   customer?: { fullName?: string };
+  purchaseOrderNumber?: string;
 }
 
 interface NotificationItem {
@@ -47,9 +48,12 @@ const buildNotifications = (payments: PaymentReminder[]): NotificationItem[] => 
       const diffDays = dayjs(payment.dueDate).diff(now, "day", true);
       const roundedDays = Math.ceil(diffDays);
       daysLabel =
-        roundedDays === 1
-          ? "an upcoming due date Tomorrow"
+        roundedDays === 0
+          ? "an upcoming due date today"
+          : roundedDays === 1
+          ? "an upcoming due date tomorrow"
           : `an upcoming due date in ${roundedDays} days`;
+      daysLabel = `${daysLabel} for purchase order ${payment.purchaseOrderNumber}`
     }
     return {
       title: "Payment reminder",
