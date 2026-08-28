@@ -971,19 +971,22 @@ const SalesListing: React.FC = () => {
                   </TableSortLabel>
                 </TableCell>
 
-                {/* New Sale Date column (sortable) */}
                 <TableCell>
                   <TableSortLabel
                     active={sortBy === "saleDate"}
                     direction={sortBy === "saleDate" ? sortDir : "desc"}
                     onClick={() => handleSort("saleDate")}
                   >
-                    Sale Date
+                    Purchase Order Date
                   </TableSortLabel>
                 </TableCell>
 
                 {/* Customer */}
-                <TableCell>Customer</TableCell>
+                <TableCell
+                  sx={{ width: { xs: "20%", md: "15%" }, minWidth: 150 }}
+                >
+                  Customer
+                </TableCell>
                 <TableCell>Payment Option</TableCell>
                 <TableCell
                   sx={{ width: { xs: "20%", md: "15%" }, minWidth: 150 }}

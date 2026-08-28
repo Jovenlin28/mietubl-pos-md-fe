@@ -49,6 +49,9 @@ import CreditCardTransactionsAccounts from "./pages/CreditCardTransactionsAccoun
 import FinancialStatementOfAccounts from "./pages/FinancialStatementOfAccounts";
 import CreditCardTransactionsReport from "./pages/CreditCardTransactionsReport";
 import ExpenseBudgetManagement from "./pages/ExpenseBudgetManagement";
+import PublicPurchaseOrder from "./pages/PublicPurchaseOrder";
+import CustomerPurchaseOrders from "./pages/CustomerPurchaseOrders";
+import PurchaseOrderTracker from "./pages/PurchaseOrderTracker";
 
 // Route guard component
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({
@@ -84,6 +87,8 @@ const App: React.FC = () => {
       <Routes>
         {/* Public route */}
         <Route path="/login" element={<Login />} />
+        <Route path="/purchase-order" element={<PublicPurchaseOrder />} />
+        <Route path="/purchase-order-tracker" element={<PurchaseOrderTracker />} />
 
         {/* Protected routes with DashboardLayout */}
         <Route
@@ -101,6 +106,7 @@ const App: React.FC = () => {
           <Route path="warehouses" element={<Warehouses />} />
           <Route path="stock-in-logs" element={<StockInLogs />} />
           <Route path="sales" element={<SalesListing />} />
+          <Route path="customer-purchase-orders" element={<CustomerPurchaseOrders />} />
           <Route path="expenses" element={<Expenses />} />
           <Route path="products/:id" element={<ProductDetail />} />
           <Route path="products/create" element={<CreateProduct />} />

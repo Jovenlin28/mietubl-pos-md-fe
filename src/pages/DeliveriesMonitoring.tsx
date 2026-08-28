@@ -572,24 +572,19 @@ const DeliveriesMonitoring: React.FC = () => {
                     <TableCell>
                       <Stack direction="row" alignItems="center">
                         <Button
-                          sx={{ textAlign: 'left'}}
+                          sx={{ textAlign: "left" }}
                           size="small"
                           onClick={() => toggleRow(row.id)}
+                          endIcon={
+                            expandedRows[row.id] ? (
+                              <KeyboardArrowUpIcon fontSize="small" />
+                            ) : (
+                              <KeyboardArrowDownIcon fontSize="small" />
+                            )
+                          }
                         >
                           View attachments
-                          <IconButton
-                          size="small"
-                          onClick={() => toggleRow(row.id)}
-                          aria-label={expandedRows[row.id] ? 'collapse' : 'expand'}
-                        >
-                          {expandedRows[row.id] ? (
-                            <KeyboardArrowUpIcon fontSize="small" />
-                          ) : (
-                            <KeyboardArrowDownIcon fontSize="small" />
-                          )}
-                        </IconButton>
                         </Button>
-                        
                       </Stack>
                     </TableCell>
                     <TableCell sx={{ whiteSpace: 'nowrap' }}>

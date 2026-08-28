@@ -6,6 +6,7 @@ export const MODULES = [
   { name: "Stores", perms: ["Read", "Create", "Update", "Delete"] },
   { name: "Stock In Logs", perms: ["Read", "Create", "Update"] },
   { name: "Purchase Orders", perms: ["Read", "Create", "Update", "Delete"] },
+  { name: "Customer Purchase Orders", perms: ["Read", "Create", "Update", "Delete"] },
   { name: "Expense Listing", perms: ["Read", "Create", "Update", "Delete"] },
   { name: "Expense Categories", perms: ["Read", "Create", "Update", "Delete"] },
   { name: "Expense Budget Management", perms: ["Read", "Create", "Update", "Delete"] },

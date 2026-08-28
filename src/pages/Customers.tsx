@@ -256,7 +256,6 @@ const Customers: React.FC = () => {
           <Table sx={{ minWidth: 1200 }}>
             <TableHead>
               <TableRow>
-                <TableCell sx={{ fontWeight: 700 }}>ID</TableCell>
                 <TableCell sx={{ fontWeight: 700 }}>
                   <TableSortLabel
                     active={sortBy === "fullName"}
@@ -304,7 +303,6 @@ const Customers: React.FC = () => {
               ) : (
                 customers.map((row, idx) => (
                   <TableRow key={row.id}>
-                    <TableCell>{page * rowsPerPage + idx + 1}</TableCell>
                     <TableCell>{row.fullName}</TableCell>
                     <TableCell>{row.email}</TableCell>
                     <TableCell>{row.phoneNumber}</TableCell>

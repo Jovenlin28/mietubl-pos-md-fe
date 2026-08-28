@@ -56,6 +56,11 @@ const sections = [
       { label: "Quotations", icon: <DescriptionIcon />, path: "/quotations" },
       { label: "Purchase Orders", icon: <ReceiptIcon />, path: "/sales" },
       {
+        label: "Customer Purchase Orders",
+        icon: <ReceiptIcon />,
+        path: "/customer-purchase-orders",
+      },
+      {
         label: "Deliveries Monitoring",
         icon: <LocalShippingIcon />,
         path: "/deliveries-monitoring",
