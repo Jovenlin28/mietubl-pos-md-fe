@@ -263,6 +263,7 @@ const DeliveriesMonitoring: React.FC = () => {
     { id: "datePickedUp", label: "Date Picked Up", sortable: true },
     { id: "dateDelivered", label: "Date Delivered", sortable: true },
     { id: "attachments", label: "Attachments", sortable: false },
+    { id: "trackingNumber", label: "Tracking Number", sortable: true },
     { id: "createdOn", label: "Created On", sortable: true },
     { id: "actions", label: "Actions", sortable: false },
   ];
@@ -587,6 +588,7 @@ const DeliveriesMonitoring: React.FC = () => {
                         </Button>
                       </Stack>
                     </TableCell>
+                    <TableCell>{row.trackingNumber || "-"}</TableCell>
                     <TableCell sx={{ whiteSpace: 'nowrap' }}>
                       {row.createdOn
                         ? dayjs(row.createdOn).format('MMM D, YYYY, h:mmA')

@@ -37,6 +37,15 @@ interface AddDeliveryProps {
   initialValues?: any;
 }
 
+interface DeliveryFormValues {
+  purchaseOrderNumber: string;
+  method: string;
+  status: string;
+  date: string;
+  trackingNumber: string;
+  attachment: File | string | null;
+}
+
 const requiredMark = (
   <Box component="span" sx={{ color: "#e74c3c", ml: 0.3 }}>
     *
@@ -48,6 +57,7 @@ const validationSchema = Yup.object({
   method: Yup.string().required("Delivery Method is required"),
   status: Yup.string().required("Delivery Status is required"),
   date: Yup.string().required("Date is required"),
+  trackingNumber: Yup.string().nullable(),
   attachment: Yup.mixed().nullable(),
 });
 
@@ -58,6 +68,43 @@ const AddDelivery: React.FC<AddDeliveryProps> = ({
   isEditMode,
   initialValues,
 }) => {
+  const mappedInitialValues = React.useMemo<DeliveryFormValues>(() => {
+    if (!initialValues) {
+      return {
+        purchaseOrderNumber: "",
+        method: "",
+        status: "",
+        date: "",
+        trackingNumber: "",
+        attachment: null,
+      };
+    }
+
+    const status = initialValues.status || "";
+    const mappedDate =
+      initialValues.date ||
+      (status === DELIVERY_STATUS.PROCESSED
+        ? initialValues.processedDate
+        : status === DELIVERY_STATUS.PICKED_UP
+        ? initialValues.pickedUpDate
+        : status === DELIVERY_STATUS.DELIVERED
+        ? initialValues.deliveredDate
+        : "") ||
+      initialValues.processedDate ||
+      initialValues.pickedUpDate ||
+      initialValues.deliveredDate ||
+      "";
+
+    return {
+      purchaseOrderNumber: initialValues.purchaseOrderNumber || "",
+      method: initialValues.method || "",
+      status,
+      date: mappedDate,
+      trackingNumber: initialValues.trackingNumber || "",
+      attachment: null,
+    };
+  }, [initialValues]);
+
   const [poNumbers, setPoNumbers] = useState<string[]>([]);
   const [poLoading, setPoLoading] = useState(false);
   const [poError, setPoError] = useState<string | null>(null);
@@ -89,14 +136,8 @@ const AddDelivery: React.FC<AddDeliveryProps> = ({
     };
   }, [open, isEditMode]);
 
-  const formik = useFormik({
-    initialValues: initialValues || {
-      purchaseOrderNumber: "",
-      method: "",
-      status: "",
-      date: "",
-      attachment: null,
-    },
+  const formik = useFormik<DeliveryFormValues>({
+    initialValues: mappedInitialValues,
     validationSchema,
     enableReinitialize: true,
     onSubmit: async (values, { setSubmitting, resetForm }) => {
@@ -146,6 +187,7 @@ const AddDelivery: React.FC<AddDeliveryProps> = ({
           method: values.method || null,
           status: values.status || null,
           date: values.date || null,
+          trackingNumber: (values.trackingNumber || "").trim() || null,
           attachment: attachmentUrl || null,
         };
 
@@ -294,7 +336,9 @@ const AddDelivery: React.FC<AddDeliveryProps> = ({
                         }
                         helperText={
                           (formik.touched.purchaseOrderNumber &&
-                            formik.errors.purchaseOrderNumber) ||
+                          typeof formik.errors.purchaseOrderNumber === "string"
+                            ? formik.errors.purchaseOrderNumber
+                            : "") ||
                           (poError ? poError : "")
                         }
                         InputProps={{
@@ -324,7 +368,11 @@ const AddDelivery: React.FC<AddDeliveryProps> = ({
                   onChange={formik.handleChange}
                   onBlur={formik.handleBlur}
                   error={formik.touched.method && Boolean(formik.errors.method)}
-                  helperText={formik.touched.method && formik.errors.method}
+                  helperText={
+                    formik.touched.method && typeof formik.errors.method === "string"
+                      ? formik.errors.method
+                      : ""
+                  }
                   fullWidth
                 >
                   {methodOptions.map((m) => (
@@ -344,7 +392,11 @@ const AddDelivery: React.FC<AddDeliveryProps> = ({
                   onChange={formik.handleChange}
                   onBlur={formik.handleBlur}
                   error={formik.touched.status && Boolean(formik.errors.status)}
-                  helperText={formik.touched.status && formik.errors.status}
+                  helperText={
+                    formik.touched.status && typeof formik.errors.status === "string"
+                      ? formik.errors.status
+                      : ""
+                  }
                   fullWidth
                 >
                   {statusOptions.map((s) => (
@@ -381,10 +433,33 @@ const AddDelivery: React.FC<AddDeliveryProps> = ({
                         formik.touched.date &&
                         Boolean(formik.errors.date),
                       helperText:
-                        formik.touched.date && formik.errors.date,
+                        formik.touched.date && typeof formik.errors.date === "string"
+                          ? formik.errors.date
+                          : "",
                       InputLabelProps: { shrink: true },
                     },
                   }}
+                />
+              </Grid>
+
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  label="Tracking Number"
+                  name="trackingNumber"
+                  value={formik.values.trackingNumber || ""}
+                  onChange={formik.handleChange}
+                  onBlur={formik.handleBlur}
+                  error={
+                    formik.touched.trackingNumber &&
+                    Boolean(formik.errors.trackingNumber)
+                  }
+                  helperText={
+                    formik.touched.trackingNumber &&
+                    typeof formik.errors.trackingNumber === "string"
+                      ? formik.errors.trackingNumber
+                      : ""
+                  }
+                  fullWidth
                 />
               </Grid>
 
@@ -409,13 +484,17 @@ const AddDelivery: React.FC<AddDeliveryProps> = ({
                   <input {...getInputProps()} />
                   <Typography variant="body2" color="text.secondary">
                     {formik.values.attachment
-                      ? formik.values.attachment.name || formik.values.attachment
+                      ? formik.values.attachment instanceof File
+                        ? formik.values.attachment.name
+                        : formik.values.attachment
                       : "Drag & drop or click to upload (PDF, JPG, PNG)"}
                   </Typography>
                 </Box>
                 {formik.touched.attachment && formik.errors.attachment && (
                   <Typography color="error" variant="caption">
-                    {formik.errors.attachment}
+                    {typeof formik.errors.attachment === "string"
+                      ? formik.errors.attachment
+                      : ""}
                   </Typography>
                 )}
               </Grid>
