@@ -10,6 +10,14 @@ import {
   IconButton,
   Stack,
   Tooltip,
+  TextField,
+  Switch,
+  FormControlLabel,
+  Table,
+  TableHead,
+  TableRow,
+  TableCell,
+  TableBody,
 } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
 import ContentCopyIcon from "@mui/icons-material/ContentCopy";
@@ -23,6 +31,11 @@ const useHtml2Canvas = () =>
     return mod.default;
   }, []);
 
+interface BoxEchoRow {
+  box: string;
+  echoBag: string;
+}
+
 interface InvoiceModalProps {
   open: boolean;
   onClose: () => void;
@@ -32,6 +45,10 @@ interface InvoiceModalProps {
 const InvoiceModal: React.FC<InvoiceModalProps> = ({ open, onClose, sale }) => {
   const invoiceRef = useRef<HTMLDivElement>(null);
   const getHtml2Canvas = useHtml2Canvas();
+  const [withBoxEchoBag, setWithBoxEchoBag] = React.useState(false);
+  const [boxEchoModalOpen, setBoxEchoModalOpen] = React.useState(false);
+  const [boxEchoData, setBoxEchoData] = React.useState<Record<string, BoxEchoRow>>({});
+  const [boxEchoDraft, setBoxEchoDraft] = React.useState<Record<string, BoxEchoRow>>({});
 
   const formatDate = (dateStr: string) => {
     if (!dateStr) return "";
@@ -58,6 +75,67 @@ const InvoiceModal: React.FC<InvoiceModalProps> = ({ open, onClose, sale }) => {
       document.head.appendChild(link);
     }
   }, []);
+
+  useEffect(() => {
+    if (!open) return;
+    setWithBoxEchoBag(false);
+    setBoxEchoModalOpen(false);
+    setBoxEchoData({});
+    setBoxEchoDraft({});
+  }, [open, sale?.id]);
+
+  const getProductKey = (p: any, index: number) =>
+    String(p?.id ?? p?.product_id ?? index);
+
+  const openBoxEchoModal = () => {
+    const nextDraft: Record<string, BoxEchoRow> = {};
+    if (Array.isArray(sale?.products)) {
+      sale.products.forEach((p: any, idx: number) => {
+        const key = getProductKey(p, idx);
+        nextDraft[key] = {
+          box: boxEchoData[key]?.box || "",
+          echoBag: boxEchoData[key]?.echoBag || "",
+        };
+      });
+    }
+    setBoxEchoDraft(nextDraft);
+    setBoxEchoModalOpen(true);
+  };
+
+  const handleToggleWithBoxEcho = (
+    e: React.ChangeEvent<HTMLInputElement>,
+    checked: boolean
+  ) => {
+    setWithBoxEchoBag(checked);
+    if (checked) {
+      openBoxEchoModal();
+    } else {
+      // Turning off should immediately hide related UI and reset values.
+      setBoxEchoModalOpen(false);
+      setBoxEchoDraft({});
+      setBoxEchoData({});
+    }
+  };
+
+  const handleDraftChange = (
+    key: string,
+    field: "box" | "echoBag",
+    value: string
+  ) => {
+    setBoxEchoDraft((prev) => ({
+      ...prev,
+      [key]: {
+        box: prev[key]?.box || "",
+        echoBag: prev[key]?.echoBag || "",
+        [field]: value,
+      },
+    }));
+  };
+
+  const saveBoxEchoData = () => {
+    setBoxEchoData(boxEchoDraft);
+    setBoxEchoModalOpen(false);
+  };
 
   const handlePrint = () => {
     if (!invoiceRef.current) return;
@@ -365,6 +443,11 @@ const InvoiceModal: React.FC<InvoiceModalProps> = ({ open, onClose, sale }) => {
               .table td:nth-child(n+2) {
                 white-space: nowrap !important;
               }
+
+              .table th.box-echo-header,
+              .table td.box-echo-cell {
+                white-space: pre-line !important;
+              }
               
               /* Grand total row styling */
               .grand-total-row {
@@ -558,12 +641,35 @@ const InvoiceModal: React.FC<InvoiceModalProps> = ({ open, onClose, sale }) => {
         Purchase Order Preview
       </DialogTitle>
 
-      <DialogContent dividers>
+      <DialogContent dividers sx={{ pb: 4 }}>
+        <Stack
+          direction="row"
+          justifyContent="space-between"
+          alignItems="center"
+          sx={{ mb: 0, padding: "0 24px" }}
+        >
+          <FormControlLabel
+            control={
+              <Switch
+                checked={withBoxEchoBag}
+                onChange={handleToggleWithBoxEcho}
+                color="primary"
+              />
+            }
+            label="With box or echo bag"
+          />
+          {withBoxEchoBag && (
+            <Button variant="text" onClick={openBoxEchoModal}>
+              Edit Box/Echo Bag
+            </Button>
+          )}
+        </Stack>
         <Box
           ref={invoiceRef}
           sx={{
             bgcolor: "#fff",
             p: 3,
+            pb: 6,
             // ensure Roboto is used inside the preview
             fontFamily: `'Roboto', 'Helvetica', 'Arial', sans-serif`,
           }}
@@ -675,12 +781,24 @@ const InvoiceModal: React.FC<InvoiceModalProps> = ({ open, onClose, sale }) => {
               >
                 {/* equal fixed column widths; tuned so text cells don't overflow numeric columns */}
                 <colgroup>
-                  {/* reduce description column to 40%, increase numeric columns */}
-                  <col style={{ width: "36%" }} />
-                  <col style={{ width: "16%" }} />
-                  <col style={{ width: "16%" }} />
-                  <col style={{ width: "16%" }} />
-                  <col style={{ width: "16%" }} />
+                  {withBoxEchoBag ? (
+                    <>
+                      <col style={{ width: "23%" }} />
+                      <col style={{ width: "10%" }} />
+                      <col style={{ width: "16%" }} />
+                      <col style={{ width: "16%" }} />
+                      <col style={{ width: "16%" }} />
+                      <col style={{ width: "19%" }} />
+                    </>
+                  ) : (
+                    <>
+                      <col style={{ width: "35%" }} />
+                      <col style={{ width: "12%" }} />
+                      <col style={{ width: "19%" }} />
+                      <col style={{ width: "15%" }} />
+                      <col style={{ width: "19%" }} />
+                    </>
+                  )}
                 </colgroup>
                 <thead>
                   <tr>
@@ -695,7 +813,7 @@ const InvoiceModal: React.FC<InvoiceModalProps> = ({ open, onClose, sale }) => {
                         whiteSpace: "normal",
                       }}
                     >
-                      ITEM DESCRIPTION
+                      PRODUCT
                     </th>
                     <th
                       style={{
@@ -709,7 +827,7 @@ const InvoiceModal: React.FC<InvoiceModalProps> = ({ open, onClose, sale }) => {
                         textAlign: "center",
                       }}
                     >
-                      QUANTITY
+                      QTY
                     </th>
                     <th
                       style={{
@@ -723,7 +841,7 @@ const InvoiceModal: React.FC<InvoiceModalProps> = ({ open, onClose, sale }) => {
                         textAlign: "right",
                       }}
                     >
-                      UNIT PRICE
+                      PRICE
                     </th>
                     <th
                       style={{
@@ -753,11 +871,29 @@ const InvoiceModal: React.FC<InvoiceModalProps> = ({ open, onClose, sale }) => {
                     >
                       TOTAL
                     </th>
+                    {withBoxEchoBag && (
+                      <th
+                        className="box-echo-header"
+                        style={{
+                          border: "1px solid #222",
+                          padding: 6,
+                          verticalAlign: "middle",
+                          background: "#f39c12",
+                          color: "#fff",
+                          fontWeight: 700,
+                          textAlign: "left",
+                        }}
+                      >
+                        BOX / ECHO BAG
+                      </th>
+                    )}
                   </tr>
                 </thead>
                 <tbody>
                   {Array.isArray(sale.products) && sale.products.length > 0 ? (
                     sale.products.map((p: any, idx: number) => {
+                      const key = getProductKey(p, idx);
+                      const rowMeta = boxEchoData[key] || { box: "", echoBag: "" };
                       const qty = Number(p.quantity ?? 1);
                       const unitPrice = Number(p.price ?? 0);
 
@@ -818,6 +954,21 @@ const InvoiceModal: React.FC<InvoiceModalProps> = ({ open, onClose, sale }) => {
                               p.price * p.quantity - p.discount * p.quantity
                             )}
                           </td>
+                          {withBoxEchoBag && (
+                            <td
+                              className="box-echo-cell"
+                              style={{
+                                border: "1px solid #222",
+                                padding: 6,
+                                textAlign: "left",
+                                verticalAlign: "middle",
+                                whiteSpace: "pre-line",
+                                fontSize: 13,
+                              }}
+                            >
+                              {`Box: ${rowMeta.box || "-"}\nEcho bag: ${rowMeta.echoBag || "-"}`}
+                            </td>
+                          )}
                         </tr>
                       );
                     })
@@ -829,7 +980,7 @@ const InvoiceModal: React.FC<InvoiceModalProps> = ({ open, onClose, sale }) => {
                           padding: 6,
                           verticalAlign: "middle",
                         }}
-                        colSpan={5}
+                        colSpan={withBoxEchoBag ? 6 : 5}
                       >
                         No products found.
                       </td>
@@ -910,6 +1061,15 @@ const InvoiceModal: React.FC<InvoiceModalProps> = ({ open, onClose, sale }) => {
                     >
                       {formatCurrency(sale.netTotal)}
                     </td>
+                    {withBoxEchoBag && (
+                      <td
+                        style={{
+                          border: "none",
+                          background: "transparent",
+                          padding: 0,
+                        }}
+                      />
+                    )}
                   </tr>
                 </tbody>
               </table>
@@ -933,11 +1093,11 @@ const InvoiceModal: React.FC<InvoiceModalProps> = ({ open, onClose, sale }) => {
                     {/* match column widths with main products table */}
                     <colgroup>
                       {/* match reduced description column and larger numeric columns */}
-                      <col style={{ width: "36%" }} />
-                      <col style={{ width: "16%" }} />
-                      <col style={{ width: "16%" }} />
-                      <col style={{ width: "16%" }} />
-                      <col style={{ width: "16%" }} />
+                      <col style={{ width: "35%" }} />
+                      <col style={{ width: "12%" }} />
+                      <col style={{ width: "19%" }} />
+                      <col style={{ width: "15%" }} />
+                      <col style={{ width: "19%" }} />
                     </colgroup>
                     <thead>
                       <tr>
@@ -952,7 +1112,7 @@ const InvoiceModal: React.FC<InvoiceModalProps> = ({ open, onClose, sale }) => {
                             whiteSpace: "normal",
                           }}
                         >
-                          ITEM DESCRIPTION
+                          PRODUCT
                         </th>
                         <th
                           style={{
@@ -966,7 +1126,7 @@ const InvoiceModal: React.FC<InvoiceModalProps> = ({ open, onClose, sale }) => {
                             whiteSpace: "nowrap",
                           }}
                         >
-                          QUANTITY
+                          QTY
                         </th>
                         <th
                           style={{
@@ -980,7 +1140,7 @@ const InvoiceModal: React.FC<InvoiceModalProps> = ({ open, onClose, sale }) => {
                             whiteSpace: "nowrap",
                           }}
                         >
-                          UNIT PRICE
+                          PRICE
                         </th>
                         <th
                           style={{
@@ -1273,6 +1433,85 @@ const InvoiceModal: React.FC<InvoiceModalProps> = ({ open, onClose, sale }) => {
           </Tooltip>
         </Stack>
       </DialogActions>
+
+      <Dialog
+        open={boxEchoModalOpen}
+        onClose={() => setBoxEchoModalOpen(false)}
+        maxWidth="md"
+        fullWidth
+      >
+        <DialogTitle sx={{ fontWeight: 700 }}>Box / Echo Bag per Product</DialogTitle>
+        <DialogContent dividers>
+          <Table size="small">
+            <TableHead>
+              <TableRow>
+                <TableCell sx={{ fontWeight: 700 }}>Item Description</TableCell>
+                <TableCell sx={{ fontWeight: 700, width: 220 }}>Box</TableCell>
+                <TableCell sx={{ fontWeight: 700, width: 220 }}>Echo bag</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {Array.isArray(sale?.products) && sale.products.length > 0 ? (
+                sale.products.map((p: any, idx: number) => {
+                  const key = getProductKey(p, idx);
+                  return (
+                    <TableRow key={`box-echo-${key}`}>
+                      <TableCell>{p.name || "-"}</TableCell>
+                      <TableCell>
+                        <TextField
+                          size="small"
+                          fullWidth
+                          value={boxEchoDraft[key]?.box || ""}
+                          onChange={(
+                            e: React.ChangeEvent<
+                              HTMLInputElement | HTMLTextAreaElement
+                            >
+                          ) =>
+                            handleDraftChange(key, "box", e.target.value)
+                          }
+                          placeholder="Enter box"
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <TextField
+                          size="small"
+                          fullWidth
+                          value={boxEchoDraft[key]?.echoBag || ""}
+                          onChange={(
+                            e: React.ChangeEvent<
+                              HTMLInputElement | HTMLTextAreaElement
+                            >
+                          ) =>
+                            handleDraftChange(key, "echoBag", e.target.value)
+                          }
+                          placeholder="Enter echo bag"
+                        />
+                      </TableCell>
+                    </TableRow>
+                  );
+                })
+              ) : (
+                <TableRow>
+                  <TableCell colSpan={3}>No products found.</TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </DialogContent>
+        <DialogActions sx={{ justifyContent: "space-between", px: 3 }}>
+          <Button
+            variant="outlined"
+            color="inherit"
+            onClick={() => setBoxEchoModalOpen(false)}
+            sx={{ minWidth: 140 }}
+          >
+            Cancel
+          </Button>
+          <Button variant="contained" onClick={saveBoxEchoData}>
+            Save
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Dialog>
   );
 };
