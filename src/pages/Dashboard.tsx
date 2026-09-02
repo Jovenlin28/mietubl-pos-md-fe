@@ -70,6 +70,7 @@ const months = [
 ];
 
 const SALES_TARGET = 6000000;
+const ALL_MONTH_VALUE = -1;
 
 const Dashboard: React.FC = () => {
   const [loading, setLoading] = useState(false);
@@ -143,16 +144,34 @@ const Dashboard: React.FC = () => {
   const isMobile = useMediaQuery("(max-width:800px)");
   const textColor = theme.palette.text.primary;
 
-  const getMonthParam = (mIndex = monthIndex, y = year) => `${y}-${String(mIndex + 1).padStart(2, "0")}`;
+  const buildSummaryParams = (
+    mIndex = monthIndex,
+    y = year,
+    categoryName = selectedCategoryName
+  ) => {
+    const params = new URLSearchParams();
+    params.append("year", String(y));
+
+    if (mIndex !== ALL_MONTH_VALUE) {
+      params.append("month", String(mIndex + 1).padStart(2, "0"));
+    }
+
+    if (categoryName) {
+      params.append("category", categoryName);
+    }
+
+    return params;
+  };
 
   // move loader function out so UI controls can call it
-  const loadSummary = async (monthParam?: string, categoryName?: string | null) => {
+  const loadSummary = async (
+    mIndex = monthIndex,
+    y = year,
+    categoryName = selectedCategoryName
+  ) => {
     setLoading(true);
     try {
-      const m = monthParam ?? getMonthParam();
-      const params = new URLSearchParams();
-      if (m) params.append("month", m);
-      if (categoryName) params.append("category", categoryName);
+      const params = buildSummaryParams(mIndex, y, categoryName);
 
       const url = "/dashboard/summary" + (params.toString() ? `?${params.toString()}` : "");
       const { data } = await axiosInstance.get(url);
@@ -282,7 +301,7 @@ const Dashboard: React.FC = () => {
     // Guard so we don't fire twice in React 18 StrictMode (dev)
     if (didLoadRef.current) return;
     didLoadRef.current = true;
-    loadSummary(getMonthParam());
+    loadSummary();
   }, []);
 
   // load categories for dropdown
@@ -539,10 +558,10 @@ const Dashboard: React.FC = () => {
               onChange={(e) => {
                 const v = Number(e.target.value);
                 setMonthIndex(v);
-                const m = getMonthParam(v);
-                loadSummary(m, selectedCategoryName);
+                loadSummary(v, year, selectedCategoryName);
               }}
             >
+              <MenuItem value={ALL_MONTH_VALUE}>All</MenuItem>
               {months.map((m, i) => (
                 <MenuItem key={m} value={i}>
                   {m}
@@ -566,8 +585,7 @@ const Dashboard: React.FC = () => {
               onChange={(e) => {
                 const v = Number(e.target.value);
                 setYear(v);
-                // refresh using currently selected month index
-                loadSummary(getMonthParam(monthIndex, v), selectedCategoryName);
+                loadSummary(monthIndex, v, selectedCategoryName);
               }}
             >
               {([new Date().getFullYear(), new Date().getFullYear() - 1]).map((y) => (
@@ -586,7 +604,7 @@ const Dashboard: React.FC = () => {
             onChange={(e) => {
               const v = e.target.value === "" ? null : String(e.target.value);
               setSelectedCategoryName(v);
-              loadSummary(getMonthParam(), v);
+              loadSummary(monthIndex, year, v);
             }}
             sx={{
               width: { xs: "100%", sm: 220 },
@@ -606,7 +624,7 @@ const Dashboard: React.FC = () => {
             <Button
               variant="contained"
               size="small"
-              onClick={() => loadSummary(getMonthParam(), selectedCategoryName)}
+              onClick={() => loadSummary(monthIndex, year, selectedCategoryName)}
             >
               Apply
             </Button>
@@ -614,10 +632,12 @@ const Dashboard: React.FC = () => {
               variant="outlined"
               size="small"
               onClick={() => {
-                setMonthIndex(new Date().getMonth());
+                const currentMonth = new Date().getMonth();
+                const currentYear = new Date().getFullYear();
+                setMonthIndex(currentMonth);
                 setSelectedCategoryName(null);
-                setYear(new Date().getFullYear());
-                loadSummary(getMonthParam(new Date().getMonth()));
+                setYear(currentYear);
+                loadSummary(currentMonth, currentYear, null);
               }}
             >
               Clear
