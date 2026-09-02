@@ -48,6 +48,7 @@ import { hi } from "date-fns/locale";
 
 const Products: React.FC = () => {
   const [categoriesList, setCategoriesList] = useState<string[]>([]);
+  const [categoryIdByName, setCategoryIdByName] = useState<Record<string, string>>({});
   const [brandsList, setBrandsList] = useState<string[]>([]);
   const [categoriesLoading, setCategoriesLoading] = useState(false);
   const [brandsLoading, setBrandsLoading] = useState(false);
@@ -66,6 +67,7 @@ const Products: React.FC = () => {
   const [searchInput, setSearchInput] = useState("");
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("");
+  const [selectedCategoryId, setSelectedCategoryId] = useState("");
   const [brandFilter, setBrandFilter] = useState("");
   const [products, setProducts] = useState<Product[]>([]);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
@@ -178,11 +180,27 @@ const Products: React.FC = () => {
             .map((x: any) => (x && x.name ? x.name : String(x)))
             .filter(Boolean);
         };
+
+        const normalizeCategoryMap = (data: any) => {
+          const arr = Array.isArray(data)
+            ? data
+            : Array.isArray(data?.items)
+            ? data.items
+            : [];
+          return arr.reduce((acc: Record<string, string>, item: any) => {
+            if (item?.name && item?.id) {
+              acc[item.name] = item.id;
+            }
+            return acc;
+          }, {});
+        };
         setCategoriesList(normalize(catRes.data));
+        setCategoryIdByName(normalizeCategoryMap(catRes.data));
         setBrandsList(normalize(brandRes.data));
       } catch (err) {
         console.error("Failed to load categories/brands", err);
         setCategoriesList([]);
+        setCategoryIdByName({});
         setBrandsList([]);
       } finally {
         if (mounted) {
@@ -281,6 +299,9 @@ const Products: React.FC = () => {
     setLoading(true);
     try {
       const resp = await axiosInstance.get("/export-products", {
+        params: {
+          ...(selectedCategoryId ? { categoryId: selectedCategoryId } : {}),
+        },
         responseType: "blob",
       });
       const blob = new Blob(
@@ -554,6 +575,7 @@ const Products: React.FC = () => {
               value={categoryFilter || null}
               onChange={(_, value) => {
                 setCategoryFilter(value || "");
+                setSelectedCategoryId(value ? categoryIdByName[value] || "" : "");
               }}
               clearOnEscape
               renderInput={(params) => (

@@ -16,6 +16,8 @@ import {
   Select,
 } from "@mui/material";
 import { Bar as BarChart, Doughnut } from "react-chartjs-2";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -502,6 +504,173 @@ const Dashboard: React.FC = () => {
     },
   ];
 
+  const formatAmount = (value: number) =>
+    Number(value || 0).toLocaleString(undefined, {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    });
+
+  const getSelectedMonthLabel = () =>
+    monthIndex === ALL_MONTH_VALUE ? "All Months" : months[monthIndex];
+
+  const loadImage = (src: string) =>
+    new Promise<HTMLImageElement>((resolve, reject) => {
+      const image = new Image();
+      image.onload = () => resolve(image);
+      image.onerror = () => reject(new Error("Unable to load image"));
+      image.src = src;
+    });
+
+  const addReportLogo = async (report: jsPDF) => {
+    try {
+      const image = await loadImage("/mietubl_logo.png");
+      const canvas = document.createElement("canvas");
+      canvas.width = image.naturalWidth;
+      canvas.height = image.naturalHeight;
+
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return 40;
+
+      ctx.drawImage(image, 0, 0);
+      const dataUrl = canvas.toDataURL("image/png");
+
+      const maxLogoWidth = 170;
+      const maxLogoHeight = 60;
+      const ratio = Math.min(
+        maxLogoWidth / image.naturalWidth,
+        maxLogoHeight / image.naturalHeight
+      );
+      const logoWidth = image.naturalWidth * ratio;
+      const logoHeight = image.naturalHeight * ratio;
+      const x = (report.internal.pageSize.getWidth() - logoWidth) / 2;
+
+      report.addImage(dataUrl, "PNG", x, 18, logoWidth, logoHeight);
+
+      return 18 + logoHeight + 16;
+    } catch (error) {
+      return 40;
+    }
+  };
+
+  const handleGenerateReport = async () => {
+    const report = new jsPDF({ unit: "pt", format: "a4" });
+    const generatedAt = new Date();
+    const monthLabel = getSelectedMonthLabel();
+    const categoryLabel = selectedCategoryName || "All Categories";
+    const headerStartY = await addReportLogo(report);
+    const titleY = headerStartY + 18;
+    const detailsY = titleY + 22;
+    const generatedY = detailsY + 16;
+    const tableStartY = generatedY + 14;
+
+    report.setFontSize(18);
+    report.text("Summary Report", 40, titleY);
+
+    report.setFontSize(11);
+    report.setTextColor(80);
+    report.text(`Year: ${year}`, 40, detailsY);
+    report.text(`Month: ${monthLabel}`, 140, detailsY);
+    report.text(`Category: ${categoryLabel}`, 270, detailsY);
+    report.text(`Generated: ${generatedAt.toLocaleString()}`, 40, generatedY);
+
+    autoTable(report, {
+      startY: tableStartY,
+      head: [["Metric", "Value"]],
+      body: [
+        ["All Time Gross Profit", formatAmount(allTime.grossProfit)],
+        ["Gross Profit Margin", `${allTime.grossProfitMargin}%`],
+        ["Total Sold Price", formatAmount(allTime.sales)],
+        ["Total Costing Price", formatAmount(allTime.totalCostingPrice)],
+        ["All-time Expense", formatAmount(allTime.expenses)],
+        [
+          "Total Received Payments",
+          formatAmount(Number((allTime as any).totalPaymentsAccomplies || 0)),
+        ],
+        [
+          "Total Unreceived Payments",
+          formatAmount(
+            Math.max(
+              0,
+              Number(allTime.sales || 0) -
+                Number((allTime as any).totalPaymentsAccomplies || 0)
+            )
+          ),
+        ],
+        [
+          "Total Purchase Orders",
+          Number((allTime as any).totalPurchaseOrders || 0).toLocaleString(),
+        ],
+        ["Total Paid Orders", Number((allTime as any).totalPaidOrders || 0).toLocaleString()],
+        [
+          "Total Unpaid Orders",
+          Number((allTime as any).totalUnpaidOrders || 0).toLocaleString(),
+        ],
+        [
+          "Total Paid Orders Partially",
+          Number((allTime as any).totalPaidOrdersPartially || 0).toLocaleString(),
+        ],
+        [
+          "Total Agent Commissions",
+          formatAmount(Number((allTime as any).totalAgentCommissions || 0)),
+        ],
+        ["Orders This Month", ordersToday.toLocaleString()],
+      ],
+      styles: { fontSize: 10, cellPadding: 6 },
+      headStyles: { fillColor: [243, 156, 18] },
+      columnStyles: {
+        0: { cellWidth: 230 },
+      },
+    });
+
+    autoTable(report, {
+      startY: (report as any).lastAutoTable.finalY + 18,
+      head: [["Top Sales Channel", "Total"]],
+      body:
+        topChannels.length > 0
+          ? topChannels.map((ch) => [
+              ch.name || "Unknown",
+              Number(ch.total || 0).toLocaleString(),
+            ])
+          : [["No data", "0"]],
+      styles: { fontSize: 10, cellPadding: 6 },
+      headStyles: { fillColor: [243, 156, 18] },
+    });
+
+    autoTable(report, {
+      startY: (report as any).lastAutoTable.finalY + 18,
+      head: [["Top Selling Item / Service", "Total Quantity"]],
+      body:
+        bestsellers.length > 0
+          ? bestsellers.map((item) => [
+              item.name || "Unknown",
+              Number(item.total || 0).toLocaleString(),
+            ])
+          : [["No data", "0"]],
+      styles: { fontSize: 10, cellPadding: 6 },
+      headStyles: { fillColor: [39, 174, 96] },
+    });
+
+    autoTable(report, {
+      startY: (report as any).lastAutoTable.finalY + 18,
+      head: [["Expense Category", "Total"]],
+      body:
+        expenseDist.length > 0
+          ? expenseDist.map((item) => [
+              item.name || "Unknown",
+              formatAmount(Number(item.total || 0)),
+            ])
+          : [["No data", "0.00"]],
+      styles: { fontSize: 10, cellPadding: 6 },
+      headStyles: { fillColor: [192, 57, 43] },
+    });
+
+    const normalizedMonth =
+      monthIndex === ALL_MONTH_VALUE
+        ? "all"
+        : String(monthIndex + 1).padStart(2, "0");
+    report.save(`dashboard-report-${year}-${normalizedMonth}.pdf`);
+  };
+
   return (
     <Box
       sx={{
@@ -641,6 +810,9 @@ const Dashboard: React.FC = () => {
               }}
             >
               Clear
+            </Button>
+            <Button variant="outlined" size="small" onClick={handleGenerateReport}>
+              Generate Report
             </Button>
           </Box>
         </MBox>
